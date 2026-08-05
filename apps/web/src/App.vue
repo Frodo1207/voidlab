@@ -2,8 +2,8 @@
 import { computed, watchEffect } from "vue";
 import { useRoute } from "vue-router";
 import SpaceBackground from "../components/SpaceBackground.vue";
-import greenLogo from "../../../assets/logo/green-bg.PNG";
-import whiteLogo from "../../../assets/logo/white-bg.PNG";
+import greenLogo from "../../../assets/logo/green-bg.svg";
+import whiteLogo from "../../../assets/logo/white-bg.svg";
 
 const route = useRoute();
 
@@ -46,14 +46,15 @@ watchEffect(() => {
 
   const icon = ensureIconLink("icon");
   icon.href = favicon;
-  icon.type = "image/png";
+  icon.type = "image/svg+xml";
 
   const shortcutIcon = ensureIconLink("shortcut icon");
   shortcutIcon.href = favicon;
-  shortcutIcon.type = "image/png";
+  shortcutIcon.type = "image/svg+xml";
 
   const appleTouchIcon = ensureIconLink("apple-touch-icon");
   appleTouchIcon.href = favicon;
+  appleTouchIcon.type = "image/svg+xml";
 });
 </script>
 

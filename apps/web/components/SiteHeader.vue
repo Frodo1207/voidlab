@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import greenLogo from '../../../assets/logo/green-bg.PNG';
-import whiteLogo from '../../../assets/logo/white-bg.PNG';
+import greenLogo from '../../../assets/logo/green-bg.svg';
+import whiteLogo from '../../../assets/logo/white-bg.svg';
 
 const props = defineProps<{
   theme?: 'dark' | 'light';
@@ -61,6 +61,8 @@ const navLinks = [
         <img
           :src="headerLogo"
           alt="VOIDLAB logo"
+          width="32"
+          height="32"
           class="h-8 w-8 rounded-[10px] object-cover shadow-sm"
         />
         <span 
