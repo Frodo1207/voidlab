@@ -1,0 +1,21 @@
+{
+  "name": "voidlabai",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "apps/admin"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @voidlab/web",
+    "dev:admin": "npm run dev -w @voidlab/admin",
+    "build:web": "npm run build -w @voidlab/web",
+    "build:admin": "npm run build -w @voidlab/admin",
+    "build:frontends": "npm run build:web && npm run build:admin",
+    "lint:web": "npm run lint -w @voidlab/web",
+    "lint:admin": "npm run lint -w @voidlab/admin"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

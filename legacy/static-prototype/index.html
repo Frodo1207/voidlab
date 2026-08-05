@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>VOID LAB | 探索 AI 的边界</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入字体 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'Zpix';
+      src: url('https://unpkg.com/zpix-browser/dist/zpix.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --color-turquoise: #42FFD1;
+      --color-black: #121212;
+      --color-white: #F8F8F8;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--color-black);
+      color: var(--color-white);
+      font-family: 'Noto Sans SC', sans-serif;
+      /* 允许滚动，定制滚动条 */
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--color-black);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(248, 248, 248, 0.3);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-turquoise);
+    }
+
+    /* 像素风英文字体点缀 */
+    .pixel-text {
+      font-family: 'VT323', monospace;
+      letter-spacing: 0.1em;
+      color: var(--color-turquoise);
+    }
+
+    /* 极细的 1px 边框与透明交互 */
+    .moonshot-panel {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+    
+    .moonshot-panel:hover {
+      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    /* 画布背景固定在底层 */
+    #space-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* 确保内容在画布之上 */
+    .content-layer {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .typing-cursor::after {
+      content: '_';
+      animation: blink 1s step-end infinite;
+    }
+    
+    .typing-cursor-black::after {
+      content: '_';
+      color: var(--color-black);
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* 强制关闭抗锯齿，呈现完美像素感 */
+    .pixel-zh-title {
+      font-family: "Fusion Pixel 12px Mono zh_hans", "Zpix", monospace;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: grayscale;
+      font-smooth: never;
+    }
+
+    /* 跑马灯动画 */
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      animation: marquee 25s linear infinite;
+    }
+
+    /* 呼吸灯效果 */
+    .pulse-glow {
+      animation: pulseGlow 4s ease-in-out infinite alternate;
+    }
+    @keyframes pulseGlow {
+      0% { text-shadow: 0 0 10px rgba(66, 255, 209, 0.2); }
+      100% { text-shadow: 0 0 30px rgba(66, 255, 209, 0.8); }
+    }
+
+    /* 噪点纹理 */
+    .noise-bg {
+      position: relative;
+    }
+    .noise-bg::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.05;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 隐藏横向滚动条 */
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-white selection:text-black">
+
+  <!-- 动态生成的抖动像素星球与深空背景 -->
+  <canvas id="space-canvas"></canvas>
+
+  <div class="content-layer">
+    
+    <!-- 首屏 Hero Section -->
+    <section class="min-h-screen flex flex-col justify-between p-6 md:p-12">
+      <!-- 顶部极简导航 -->
+      <header class="w-full flex justify-between items-start">
+        <div class="flex items-center gap-3">
+          <div class="w-6 h-6 flex flex-wrap gap-[1px]">
+            <div class="w-[11px] h-[11px] bg-[var(--color-turquoise)] opacity-90"></div>
+            <div class="w-[11px] h-[11px] bg-white/30"></div>
+            <div class="w-[11px] h-[11px] bg-white/30"></div>
+            <div class="w-[11px] h-[11px] bg-white/80"></div>
+          </div>
+          <span class="pixel-text text-xl md:text-2xl tracking-[0.2em] font-bold">VOID LAB</span>
+        </div>
+
+        <nav class="hidden md:flex gap-12 text-sm font-light tracking-[0.1em] text-white/70">
+          <a href="#about" class="hover:text-[var(--color-turquoise)] transition-colors">核心理念</a>
+          <a href="#deploy" class="hover:text-[var(--color-turquoise)] transition-colors">咨询与陪跑</a>
+          <a href="#events" class="hover:text-[var(--color-turquoise)] transition-colors">课程与活动</a>
+        </nav>
+      </header>
+
+      <!-- 中央标题区 -->
+      <main class="flex-1 flex flex-col items-center md:items-end justify-center pointer-events-none text-center md:text-right mt-20 md:mt-0 relative z-10">
+        <!-- 紧凑的白色背景块，配合关闭抗锯齿的像素字体 -->
+        <div class="bg-white text-black px-5 py-3 mb-6 inline-block pointer-events-auto">
+          <h1 id="hero-title" class="pixel-zh-title text-4xl md:text-6xl tracking-widest leading-none m-0" style="min-height: 1em;">
+          </h1>
+        </div>
+        <div id="hero-subtitle" class="pixel-text text-xl md:text-2xl text-white/70 tracking-[0.2em] opacity-0 transition-opacity duration-1000 mt-2">
+          > We build AI assets, not toys.<span class="typing-cursor"></span>
+        </div>
+
+        <!-- 社区行动按钮 (CTA) -->
+        <div id="hero-ctas" class="flex flex-col md:flex-row gap-4 mt-12 opacity-0 transition-opacity duration-1000 pointer-events-auto">
+          <!-- 默认实心青底黑字的强引导按钮 -->
+          <a href="mailto:join@voidlab.com" class="bg-[var(--color-turquoise)] text-black px-8 py-3 text-sm tracking-[0.2em] hover:bg-white hover:text-black transition-all font-bold pixel-zh-title">
+            > 加入 VOIDLAB.AI
+          </a>
+          <a href="#about" class="border border-white/30 text-white/70 px-8 py-3 text-sm tracking-[0.2em] hover:border-white hover:text-white transition-all pixel-zh-title">
+            浏览矩阵模块
+          </a>
+        </div>
+
+        <!-- 社区实时数据面板 (Terminal Stats) -->
+        <div id="hero-stats" class="mt-12 md:mt-16 bg-black/60 border border-[var(--color-turquoise)]/30 p-6 md:p-8 backdrop-blur-md opacity-0 transition-opacity duration-1000 hidden md:block relative w-full max-w-lg">
+          <div class="absolute -top-3 left-6 bg-[var(--color-black)] px-2 text-[var(--color-turquoise)] text-xs tracking-widest pixel-text border border-[var(--color-turquoise)]/30">> SYSTEM.STATUS // COMMUNITY_METRICS</div>
+          <div class="flex justify-between items-center mt-2">
+            <div class="text-center md:text-left">
+              <div class="text-[var(--color-turquoise)] text-5xl md:text-6xl pixel-text font-bold mb-2">1000<span class="text-3xl text-[var(--color-turquoise)]/60">+</span></div>
+              <div class="text-white/70 text-sm md:text-base tracking-widest pixel-zh-title">社区成员 (Members)</div>
+            </div>
+            <div class="w-px h-16 bg-white/20"></div>
+            <div class="text-center md:text-left">
+              <div class="text-[var(--color-turquoise)] text-5xl md:text-6xl pixel-text font-bold mb-2">10<span class="text-3xl text-[var(--color-turquoise)]/60">+</span></div>
+              <div class="text-white/70 text-sm md:text-base tracking-widest pixel-zh-title">举办活动 (Events)</div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- 底部极简指引 -->
+      <footer class="w-full flex justify-between items-end mt-20 md:mt-0">
+        <div class="text-white/40 text-xs font-light tracking-widest hidden md:block">
+          <p>SYSTEM.INIT [OK]</p>
+        </div>
+        
+        <div class="flex flex-col items-center gap-2 cursor-pointer group pointer-events-auto mx-auto md:mx-0">
+          <div class="pixel-text text-white/50 group-hover:text-[var(--color-turquoise)] transition-colors text-xl animate-bounce">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="stroke-current">
+              <path d="M12 4V20M12 20L6 14M12 20L18 14" stroke-width="1" stroke-linecap="square" stroke-linejoin="miter"/>
+            </svg>
+          </div>
+          <span class="text-xs text-white/30 tracking-[0.2em] group-hover:text-white/80 transition-colors">向下滑动接入矩阵</span>
+        </div>
+      </footer>
+    </section>
+
+    <!-- 滚动内容区 1: 了解 VOID LAB -->
+    <!-- 滚动跑马灯 (Marquee) -->
+    <div class="w-full overflow-hidden border-y border-white/10 py-2 mt-20 relative z-10 bg-black/40 backdrop-blur-md pointer-events-auto">
+      <div class="whitespace-nowrap flex w-max animate-marquee pixel-text text-xs tracking-widest text-[var(--color-turquoise)]/60">
+        <span class="mx-6">> VOIDLAB_OS . ONLINE</span>
+        <span class="mx-6">AGENT_IDENTITY . VERIFIED</span>
+        <span class="mx-6">SYSTEM_AUDIT . READY</span>
+        <span class="mx-6">WORKFLOW . DEPLOYED</span>
+        <span class="mx-6">ASSETS . GENERATED</span>
+        <span class="mx-6">> VOIDLAB_OS . ONLINE</span>
+        <span class="mx-6">AGENT_IDENTITY . VERIFIED</span>
+        <span class="mx-6">SYSTEM_AUDIT . READY</span>
+        <span class="mx-6">WORKFLOW . DEPLOYED</span>
+        <span class="mx-6">ASSETS . GENERATED</span>
+        <span class="mx-6">> VOIDLAB_OS . ONLINE</span>
+        <span class="mx-6">AGENT_IDENTITY . VERIFIED</span>
+        <span class="mx-6">SYSTEM_AUDIT . READY</span>
+        <span class="mx-6">WORKFLOW . DEPLOYED</span>
+        <span class="mx-6">ASSETS . GENERATED</span>
+      </div>
+    </div>
+
+    <!-- 核心业务矩阵 (Bento Grid) -->
+    <!-- 外层包裹毛玻璃遮罩，并在底部注入强烈的青色环境光渐变 -->
+    <section id="services" class="relative z-10 w-full border-t border-white/5 pointer-events-auto overflow-hidden">
+      
+      <!-- 底部青色环境光渐变 (Ambient Glow) -->
+      <div class="absolute bottom-0 left-0 w-full h-full bg-gradient-to-t from-[var(--color-turquoise)]/20 via-[var(--color-turquoise)]/5 to-transparent pointer-events-none z-0"></div>
+      
+      <!-- 毛玻璃层 -->
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-xl z-0"></div>
+
+      <!-- 移除 max-w 限制，实现贴边的宽银幕效果 -->
+      <div class="relative z-10 w-full px-6 md:px-12 lg:px-16 pt-24 pb-12 mx-auto max-w-[1920px]">
+        <h2 class="text-4xl md:text-5xl font-bold mb-16 pixel-zh-title leading-tight text-white tracking-wide">
+          为 AI 时代而生，<br>你需要的一切生产力矩阵。
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 lg:gap-8">
+          
+          <!-- Card 1: 社区 -->
+          <div class="noise-bg group relative bg-[#0a0a0a]/80 border border-white/10 p-6 flex flex-col h-[280px] overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_rgba(66,255,209,0.15),_transparent_60%)] opacity-30 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+            <div class="relative z-10 flex-1">
+              <h3 class="text-xl md:text-2xl font-bold mb-3 pixel-zh-title">社区.Community</h3>
+              <p class="pixel-text text-xs md:text-sm text-white/60 leading-relaxed">连接最硬核的 AI 开发者与企业主。这里没有焦虑，只有能落地的实战工作流与代码。</p>
+            </div>
+            <div class="relative z-10 mt-auto pt-4">
+              <div class="pixel-text text-[10px] md:text-xs text-[var(--color-turquoise)]/80 leading-loose">
+                > event.init(bootcamp)<br>
+                > members: 1000+ joined<br>
+                <span class="text-white/30">✓ network synced</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: 资讯 -->
+          <div class="noise-bg group relative bg-[#0a0a0a]/80 border border-white/10 p-6 flex flex-col h-[280px] overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(66,255,209,0.15),_transparent_60%)] opacity-30 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+            <div class="relative z-10 flex-1">
+              <h3 class="text-xl md:text-2xl font-bold mb-3 pixel-zh-title">资讯.Insights</h3>
+              <p class="pixel-text text-xs md:text-sm text-white/60 leading-relaxed">高信息密度脱水。我们过滤掉市场上的杂音，只为你推送影响底层逻辑的 AI 商业与技术研报。</p>
+            </div>
+            <div class="relative z-10 mt-auto pt-4">
+              <div class="pixel-text text-[10px] md:text-xs text-white/60 leading-loose">
+                > fetch(global_signals)<br>
+                > noise_filtered: 99%<br>
+                <span class="text-[var(--color-turquoise)]">✓ signals extracted</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: 咨询 -->
+          <div class="noise-bg group relative bg-[#0a0a0a]/80 border border-white/10 p-6 flex flex-col h-[280px] overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(66,255,209,0.1),_transparent_70%)] opacity-30 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+            <div class="relative z-10 flex-1">
+              <h3 class="text-xl md:text-2xl font-bold mb-3 pixel-zh-title">咨询.Consulting</h3>
+              <p class="pixel-text text-xs md:text-sm text-white/60 leading-relaxed">深入企业痛点，提供定制化解法。从工作流审计到工具链选型，打破信息差，重构成本结构。</p>
+            </div>
+            <div class="relative z-10 mt-auto pt-4">
+              <div class="pixel-text text-[10px] md:text-xs text-[var(--color-turquoise)]/80 leading-loose">
+                > audit.start(workflow)<br>
+                > bottlenecks: detected<br>
+                <span class="text-white/30">✓ solutions generated</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: 陪跑 -->
+          <div class="noise-bg group relative bg-[#0a0a0a]/80 border border-white/10 p-6 flex flex-col h-[280px] overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.1),_transparent_60%)] opacity-30 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+            <div class="relative z-10 flex-1">
+              <h3 class="text-xl md:text-2xl font-bold mb-3 pixel-zh-title">陪跑.Deployment</h3>
+              <p class="pixel-text text-xs md:text-sm text-white/60 leading-relaxed">拿结果，重交付。从 Prompt 调优到私有 Agent 部署，全链路陪跑，将 AI 转化为生产力资产。</p>
+            </div>
+            <div class="relative z-10 mt-auto pt-4">
+              <div class="pixel-text text-[10px] md:text-xs text-white/60 leading-loose">
+                > agent.deploy(production)<br>
+                > env: private_cloud<br>
+                <span class="text-[var(--color-turquoise)]">✓ system running</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 社区活动横向滚动区 (Events Section) -->
+    <section id="events" class="relative z-10 w-full border-t border-white/5 pointer-events-auto overflow-hidden py-12 bg-black/60 backdrop-blur-xl">
+      <div class="relative z-10 w-full px-6 md:px-12 lg:px-16 mx-auto max-w-[1920px]">
+        
+        <!-- 标题区 -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
+          <h2 class="text-3xl md:text-4xl font-bold pixel-zh-title leading-tight text-white tracking-wide">
+            社区活动<br>
+            <span class="text-lg md:text-xl text-[var(--color-turquoise)] pixel-text">> SYSTEM.EVENTS</span>
+          </h2>
+          <a href="#" class="pixel-text text-xs md:text-sm text-white/60 hover:text-[var(--color-turquoise)] transition-colors border-b border-transparent hover:border-[var(--color-turquoise)] pb-1">
+            查看全部 [ALL_EVENTS]
+          </a>
+        </div>
+        
+        <!-- 横向滚动容器 -->
+        <div class="flex overflow-x-auto gap-6 pb-8 snap-x snap-mandatory hide-scrollbar">
+          
+          <!-- Event Card 1 -->
+          <div class="group relative bg-[#0a0a0a]/90 border border-white/10 flex flex-col overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl flex-shrink-0 w-[280px] md:w-[340px] snap-start cursor-pointer">
+            <!-- 封面图 -->
+            <div class="relative h-40 md:h-48 overflow-hidden bg-white/5 border-b border-white/10">
+              <div class="absolute inset-0 bg-[var(--color-turquoise)]/20 mix-blend-overlay opacity-50 group-hover:opacity-0 transition-opacity z-10"></div>
+              <!-- 封面图片，优先使用本地 event1.PNG -->
+              <img src="event1.PNG" onerror="this.src='https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=600&auto=format&fit=crop'" alt="Event Cover" class="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105">
+              <!-- 状态标签 -->
+              <div class="absolute top-3 left-3 z-20 bg-black/80 border border-[var(--color-turquoise)] px-2 py-1 rounded">
+                <span class="pixel-text text-[10px] text-[var(--color-turquoise)]">报名中.LIVE</span>
+              </div>
+            </div>
+            <!-- 信息区 -->
+            <div class="p-5 flex flex-col gap-4">
+              <h3 class="text-base md:text-lg font-bold pixel-zh-title text-white line-clamp-2 group-hover:text-[var(--color-turquoise)] transition-colors">AI 线下活动 | 用 AI 搭建你的个人网站</h3>
+              <div class="flex flex-col gap-2 mt-auto">
+                <div class="pixel-text text-xs text-white/60 flex items-center gap-2">
+                  <span class="text-[var(--color-turquoise)]">> [TIME]</span> 07.25 周六 14:00
+                </div>
+                <div class="pixel-text text-xs text-white/60 flex items-center gap-2">
+                  <span class="text-[var(--color-turquoise)]">> [LOC_]</span> 上海世纪大道
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Event Card 2 (示例) -->
+          <div class="group relative bg-[#0a0a0a]/90 border border-white/10 flex flex-col overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl flex-shrink-0 w-[280px] md:w-[340px] snap-start cursor-pointer">
+            <div class="relative h-40 md:h-48 overflow-hidden bg-white/5 border-b border-white/10">
+              <div class="absolute inset-0 bg-[var(--color-turquoise)]/20 mix-blend-overlay opacity-50 group-hover:opacity-0 transition-opacity z-10"></div>
+              <img src="event2.jpg" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop'" alt="Event Cover" class="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105">
+              <div class="absolute top-3 left-3 z-20 bg-black/80 border border-white/30 px-2 py-1 rounded">
+                <span class="pixel-text text-[10px] text-white/50">已结束.DONE</span>
+              </div>
+            </div>
+            <div class="p-5 flex flex-col gap-4">
+              <h3 class="text-base md:text-lg font-bold pixel-zh-title text-white line-clamp-2 group-hover:text-[var(--color-turquoise)] transition-colors">企业内训 | Agentic Workflow 落地实战</h3>
+              <div class="flex flex-col gap-2 mt-auto">
+                <div class="pixel-text text-xs text-white/60 flex items-center gap-2">
+                  <span class="text-[var(--color-turquoise)]">> [TIME]</span> 07.18 周五 13:30
+                </div>
+                <div class="pixel-text text-xs text-white/60 flex items-center gap-2">
+                  <span class="text-[var(--color-turquoise)]">> [LOC_]</span> 北京 CBD 核心区
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Event Card 3 (示例) -->
+          <div class="group relative bg-[#0a0a0a]/90 border border-white/10 flex flex-col overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:-translate-y-1 rounded-xl flex-shrink-0 w-[280px] md:w-[340px] snap-start cursor-pointer">
+            <div class="relative h-40 md:h-48 overflow-hidden bg-white/5 border-b border-white/10">
+              <div class="absolute inset-0 bg-[var(--color-turquoise)]/20 mix-blend-overlay opacity-50 group-hover:opacity-0 transition-opacity z-10"></div>
+              <img src="https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=600&auto=format&fit=crop" alt="Event Cover" class="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500 group-hover:scale-105">
+              <div class="absolute top-3 left-3 z-20 bg-black/80 border border-[var(--color-turquoise)] px-2 py-1 rounded">
+                <span class="pixel-text text-[10px] text-[var(--color-turquoise)]">招募中.OPEN</span>
+              </div>
+            </div>
+            <div class="p-5 flex flex-col gap-4">
+              <h3 class="text-base md:text-lg font-bold pixel-zh-title text-white line-clamp-2 group-hover:text-[var(--color-turquoise)] transition-colors">闭门研讨会 | 寻找下一个杀手级 AI 应用</h3>
+              <div class="flex flex-col gap-2 mt-auto">
+                <div class="pixel-text text-xs text-white/60 flex items-center gap-2">
+                  <span class="text-[var(--color-turquoise)]">> [TIME]</span> 08.05 周六 15:00
+                </div>
+                <div class="pixel-text text-xs text-white/60 flex items-center gap-2">
+                  <span class="text-[var(--color-turquoise)]">> [LOC_]</span> 线上腾讯会议
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Event Card 4 (占位/敬请期待) -->
+          <div class="group relative bg-[#0a0a0a]/50 border border-white/5 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all duration-300 hover:border-[var(--color-turquoise)] hover:bg-[#0a0a0a]/80 rounded-xl flex-shrink-0 w-[280px] md:w-[340px] snap-start cursor-pointer">
+            <div class="pixel-text text-[var(--color-turquoise)] text-2xl mb-2">+</div>
+            <div class="pixel-text text-white/40 text-xs tracking-widest">> MORE_EVENTS_LOADING</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 咨询与诊断区 (Consulting Section) -->
+    <section id="consulting" class="relative z-10 w-full border-t border-white/5 pointer-events-auto overflow-hidden py-24 bg-[#050505]">
+      <div class="relative z-10 w-full px-6 md:px-12 lg:px-16 mx-auto max-w-[1920px]">
+        
+        <!-- 标题区 -->
+        <div class="mb-16">
+          <h2 class="text-3xl md:text-4xl font-bold pixel-zh-title leading-tight text-white tracking-wide mb-4">
+            咨询与诊断<br>
+            <span class="text-lg md:text-xl text-[var(--color-turquoise)] pixel-text">> SYSTEM.AUDIT</span>
+          </h2>
+          <p class="pixel-text text-sm text-white/50 max-w-2xl leading-relaxed">
+            打破信息茧房。我们不提供空洞的趋势报告，只输出精确到算力与代码的重构蓝图。
+          </p>
+        </div>
+        
+        <!-- 双卡片布局 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          <!-- 企业级 AI 架构咨询 -->
+          <div class="noise-bg relative bg-[#0a0a0a] border border-white/10 p-8 md:p-10 flex flex-col transition-all duration-500 hover:bg-[#f8f8f8] hover:border-transparent rounded-2xl overflow-hidden group/card cursor-pointer">
+            <div class="absolute top-0 right-0 w-64 h-64 bg-[radial-gradient(circle_at_top_right,_rgba(66,255,209,0.05),_transparent_70%)] pointer-events-none group-hover/card:opacity-0 transition-opacity duration-500"></div>
+            
+            <div class="flex items-center gap-3 mb-8">
+              <div class="w-3 h-3 bg-[var(--color-turquoise)] group-hover/card:bg-black transition-colors duration-500"></div>
+              <h3 class="text-2xl font-bold pixel-zh-title text-white group-hover/card:text-black transition-colors duration-500">企业基建重构</h3>
+              <span class="pixel-text text-xs text-white/40 group-hover/card:text-black/40 ml-auto transition-colors duration-500">> --target=enterprise</span>
+            </div>
+
+            <!-- 痛点对比 -->
+            <div class="space-y-4 mb-10 border-l-2 border-white/10 group-hover/card:border-black/20 pl-4 transition-colors duration-500">
+              <div>
+                <span class="pixel-text text-[#ff4242] group-hover/card:text-[#d93030] text-xs transition-colors duration-500">> [ERR] 过去：</span>
+                <p class="text-sm text-white/60 group-hover/card:text-black/60 mt-1 leading-relaxed transition-colors duration-500">盲目采购工具，算力资源闲置，数据孤岛严重，AI 停留在员工的玩具阶段，无法转化为企业资产。</p>
+              </div>
+              <div>
+                <span class="pixel-text text-[var(--color-turquoise)] group-hover/card:text-black text-xs font-bold transition-colors duration-500">> [OK] 重构：</span>
+                <p class="text-sm text-white/80 group-hover/card:text-black/80 mt-1 leading-relaxed font-bold transition-colors duration-500">从 0 到 1 的企业级 AI 基建蓝图设计与落地规划。</p>
+              </div>
+            </div>
+
+            <!-- 核心诊断节点 -->
+            <div class="bg-black/50 group-hover/card:bg-black/5 border border-white/5 group-hover/card:border-black/10 p-5 rounded-sm mb-8 flex-1 transition-colors duration-500">
+              <div class="pixel-text text-xs text-white/40 group-hover/card:text-black/40 mb-4 transition-colors duration-500">// AUDIT_LOGS</div>
+              <ul class="space-y-3 pixel-text text-xs md:text-sm text-white/70 group-hover/card:text-black/70 transition-colors duration-500">
+                <li class="flex gap-3"><span class="text-[var(--color-turquoise)] group-hover/card:text-black font-bold transition-colors duration-500">[硬件]</span> <span>算力规划与采购指导，拒绝算力溢价。</span></li>
+                <li class="flex gap-3"><span class="text-[var(--color-turquoise)] group-hover/card:text-black font-bold transition-colors duration-500">[模型]</span> <span>开源大模型私有化部署架构，确保数据不出域。</span></li>
+                <li class="flex gap-3"><span class="text-[var(--color-turquoise)] group-hover/card:text-black font-bold transition-colors duration-500">[应用]</span> <span>内部知识库 (RAG) 与业务流接入点扫描。</span></li>
+                <li class="flex gap-3"><span class="text-[var(--color-turquoise)] group-hover/card:text-black font-bold transition-colors duration-500">[组织]</span> <span>AI 时代的企业组织架构降本与效能重构方案。</span></li>
+              </ul>
+            </div>
+
+            <!-- 底部操作区 (匹配参考图样式) -->
+            <div class="flex items-end justify-between mt-auto">
+              <div class="pixel-zh-title text-sm font-bold tracking-[0.2em] text-white/50 group-hover/card:text-black transition-colors duration-500">
+                > init_audit<br>
+                <span class="text-xs text-white/30 group-hover/card:text-black/40 font-normal">预约企业诊断</span>
+              </div>
+              <div class="w-10 h-10 bg-white text-black group-hover/card:bg-black group-hover/card:text-white flex items-center justify-center transition-colors duration-500 shadow-lg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="stroke-current">
+                  <path d="M5 19L19 5M19 5H9M19 5V15" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- 个体生产力咨询 -->
+          <div class="noise-bg relative bg-[#0a0a0a] border border-white/10 p-8 md:p-10 flex flex-col transition-all duration-500 hover:bg-[#f8f8f8] hover:border-transparent rounded-2xl overflow-hidden group/card cursor-pointer">
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-[radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.05),_transparent_70%)] pointer-events-none group-hover/card:opacity-0 transition-opacity duration-500"></div>
+            
+            <div class="flex items-center gap-3 mb-8">
+              <div class="w-3 h-3 bg-white group-hover/card:bg-black transition-colors duration-500"></div>
+              <h3 class="text-2xl font-bold pixel-zh-title text-white group-hover/card:text-black transition-colors duration-500">个体演化路线</h3>
+              <span class="pixel-text text-xs text-white/40 group-hover/card:text-black/40 ml-auto transition-colors duration-500">> --target=individual</span>
+            </div>
+
+            <!-- 痛点对比 -->
+            <div class="space-y-4 mb-10 border-l-2 border-white/10 group-hover/card:border-black/20 pl-4 transition-colors duration-500">
+              <div>
+                <span class="pixel-text text-[#ffb842] group-hover/card:text-[#d98c14] text-xs transition-colors duration-500">> [WARN] 过去：</span>
+                <p class="text-sm text-white/60 group-hover/card:text-black/60 mt-1 leading-relaxed transition-colors duration-500">深陷 AI 资讯焦虑，收藏了 1000 个 Prompt 却从不执行，缺乏系统性框架，面临被淘汰的危机。</p>
+              </div>
+              <div>
+                <span class="pixel-text text-white group-hover/card:text-black text-xs font-bold transition-colors duration-500">> [OK] 重构：</span>
+                <p class="text-sm text-white/80 group-hover/card:text-black/80 mt-1 leading-relaxed font-bold transition-colors duration-500">量身定制的个体生产力杠杆与技能树演化路径。</p>
+              </div>
+            </div>
+
+            <!-- 核心诊断节点 -->
+            <div class="bg-black/50 group-hover/card:bg-black/5 border border-white/5 group-hover/card:border-black/10 p-5 rounded-sm mb-8 flex-1 transition-colors duration-500">
+              <div class="pixel-text text-xs text-white/40 group-hover/card:text-black/40 mb-4 transition-colors duration-500">// AUDIT_LOGS</div>
+              <ul class="space-y-3 pixel-text text-xs md:text-sm text-white/70 group-hover/card:text-black/70 transition-colors duration-500">
+                <li class="flex gap-3"><span class="text-white/50 group-hover/card:text-black font-bold transition-colors duration-500">[认知]</span> <span>扫除盲区，重塑 AI 原生的商业思维与产品直觉。</span></li>
+                <li class="flex gap-3"><span class="text-white/50 group-hover/card:text-black font-bold transition-colors duration-500">[技能]</span> <span>个人学习路线定制，从使用工具到手搓 Agent。</span></li>
+                <li class="flex gap-3"><span class="text-white/50 group-hover/card:text-black font-bold transition-colors duration-500">[资产]</span> <span>如何用 AI 构建个人的“自动化印钞机”或数字分身。</span></li>
+                <li class="flex gap-3"><span class="text-white/50 group-hover/card:text-black font-bold transition-colors duration-500">[发展]</span> <span>职场转型策略与超级个体商业闭环设计。</span></li>
+              </ul>
+            </div>
+
+            <!-- 底部操作区 (匹配参考图样式) -->
+            <div class="flex items-end justify-between mt-auto">
+              <div class="pixel-zh-title text-sm font-bold tracking-[0.2em] text-white/50 group-hover/card:text-black transition-colors duration-500">
+                > init_audit<br>
+                <span class="text-xs text-white/30 group-hover/card:text-black/40 font-normal">预约个人咨询</span>
+              </div>
+              <div class="w-10 h-10 bg-white text-black group-hover/card:bg-black group-hover/card:text-white flex items-center justify-center transition-colors duration-500 shadow-lg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="stroke-current">
+                  <path d="M5 19L19 5M19 5H9M19 5V15" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 落地与陪跑区 (Deployment Section) -->
+    <!-- 外层保留深色背景，与上方无缝衔接 -->
+    <section id="deployment" class="relative z-10 w-full pointer-events-auto overflow-hidden bg-[#050505] pb-24 shadow-[0_25px_50px_-12px_rgba(0,0,0,1)]">
+      
+      <!-- 内部是一个巨大的白色圆角卡片 -->
+      <div class="relative z-10 w-full px-4 md:px-8 lg:px-12 mx-auto max-w-[1920px]">
+        <div class="relative bg-white text-black rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden py-16 md:py-24 px-6 md:px-12 lg:px-16 shadow-2xl border border-white/5">
+          <!-- 独立的噪点层，增加质感 (黑色噪点) -->
+          <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')] opacity-[0.04] pointer-events-none mix-blend-multiply"></div>
+          
+          <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+          
+          <!-- 左侧：终端介绍 (Sticky) -->
+          <div class="lg:col-span-5 lg:sticky lg:top-32">
+            <h2 class="text-3xl md:text-4xl font-bold pixel-zh-title leading-tight text-black tracking-wide mb-4">
+              落地与陪跑<br>
+              <span class="inline-block mt-2 px-2 py-1 bg-black text-white text-lg md:text-xl pixel-text">> SYSTEM.DEPLOY</span>
+            </h2>
+            <p class="pixel-text text-sm text-black/60 mb-8 leading-relaxed">
+              不卖概念，只交付资产。我们将作为您的外部 AI 技术合伙人，深入业务流，手搓定制化 Agent，直到 AI 真正变成您团队里的“数字员工”。
+            </p>
+
+            <!-- 动态终端面板 (保持深色以产生对比) -->
+            <div class="bg-[#050505] border border-black/20 rounded-lg p-5 font-mono text-xs text-white/60 shadow-2xl relative overflow-hidden group">
+              <!-- 顶部控制条 -->
+              <div class="flex items-center gap-2 mb-4 border-b border-white/10 pb-3">
+                <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                <span class="ml-2 text-white/30 tracking-widest pixel-text text-[10px]">voidlab_os ~ ./deploy_to_production.sh</span>
+              </div>
+              <!-- 终端输出 -->
+              <div class="space-y-3 pixel-text leading-relaxed">
+                <p class="text-[var(--color-turquoise)]">> Initiating Project Matrix...</p>
+                <p class="flex justify-between"><span>> Analyzing current workflow...</span> <span class="text-[#ffbd2e]">[WARN]</span></p>
+                <p class="flex justify-between"><span>> Dropping fake demands...</span> <span class="text-[#27c93f]">[OK]</span></p>
+                <p class="flex justify-between"><span>> Injecting AI agents...</span> <span class="text-[#27c93f]">[OK]</span></p>
+                <p class="flex justify-between"><span>> Compiling knowledge base...</span> <span class="text-[#27c93f]">[OK]</span></p>
+                <p class="text-white/40 mt-4">> Handover to human team... <span class="typing-cursor text-[var(--color-turquoise)]"></span></p>
+              </div>
+            </div>
+
+            <div class="mt-10">
+              <a href="#" class="inline-block bg-[var(--color-turquoise)] text-black border border-black px-8 py-4 text-sm tracking-[0.2em] hover:bg-black hover:text-white transition-all font-bold pixel-zh-title shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">
+                > sudo execute (开启陪跑)
+              </a>
+            </div>
+          </div>
+
+          <!-- 右侧：Pipeline 步骤卡片 -->
+          <div class="lg:col-span-7 flex flex-col gap-6 relative">
+            <!-- 垂直连接线 -->
+            <div class="hidden md:block absolute left-[27px] top-8 bottom-8 w-px bg-gradient-to-b from-transparent via-black/20 to-transparent z-0"></div>
+
+            <!-- Phase 1 -->
+            <div class="relative z-10 flex gap-6 group">
+              <!-- 左侧节点 -->
+              <div class="hidden md:flex flex-col items-center mt-6">
+                <div class="w-4 h-4 rounded-full border-2 border-black bg-white z-10 group-hover:bg-[var(--color-turquoise)] transition-colors"></div>
+              </div>
+              <!-- 卡片内容 -->
+              <div class="flex-1 noise-bg p-8 border border-black/10 bg-[#f8f8f8] rounded-xl relative overflow-hidden transition-all duration-300 hover:border-black hover:shadow-lg">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                  <h3 class="text-xl font-bold pixel-zh-title flex items-center gap-3">
+                    <span class="bg-black text-white px-2 py-0.5 pixel-text text-sm">PHASE_01</span>
+                    场景解构与清洗
+                  </h3>
+                  <span class="px-2 py-1 border border-black/20 text-black/40 text-[10px] pixel-text rounded-sm">01_ANALYSIS</span>
+                </div>
+                <p class="text-sm text-black/60 leading-relaxed mb-6">
+                  驻场或深度调研业务流。剔除“为了 AI 而 AI”的伪需求，定位高 ROI 杠杆点。完成内部私有数据资产的盘点、清洗与向量化准备。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pixel-text text-xs text-black/60">
+                  <div class="flex items-center gap-2"><span class="font-bold text-black">✓</span> 业务流审计报告</div>
+                  <div class="flex items-center gap-2"><span class="font-bold text-black">✓</span> 核心数据语料清洗</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 2 -->
+            <div class="relative z-10 flex gap-6 group">
+              <div class="hidden md:flex flex-col items-center mt-6">
+                <div class="w-4 h-4 rounded-full border-2 border-black bg-white z-10 group-hover:bg-[var(--color-turquoise)] transition-colors"></div>
+              </div>
+              <div class="flex-1 noise-bg p-8 border border-black/10 bg-[#f8f8f8] rounded-xl relative overflow-hidden transition-all duration-300 hover:border-black hover:shadow-lg">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_right,_rgba(0,0,0,0.03),_transparent_50%)] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                  <h3 class="text-xl font-bold pixel-zh-title flex items-center gap-3">
+                    <span class="bg-black text-white px-2 py-0.5 pixel-text text-sm">PHASE_02</span>
+                    资产构建与组装
+                  </h3>
+                  <span class="px-2 py-1 bg-[var(--color-turquoise)] border border-black text-black font-bold text-[10px] pixel-text rounded-sm animate-pulse">02_BUILDING...</span>
+                </div>
+                <p class="text-sm text-black/60 leading-relaxed mb-6">
+                  不动声色地植入技术架构。基于企业微信/飞书/钉钉或自有系统，手搓搭建私有化 Agent、RAG 知识库与自动化工作流（如 Coze, Dify, FastGPT 深度定制）。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pixel-text text-xs text-black/60">
+                  <div class="flex items-center gap-2"><span class="font-bold text-black">✓</span> 定制化数字员工</div>
+                  <div class="flex items-center gap-2"><span class="font-bold text-black">✓</span> 自动化工作流部署</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Phase 3 -->
+            <div class="relative z-10 flex gap-6 group">
+              <div class="hidden md:flex flex-col items-center mt-6">
+                <div class="w-4 h-4 rounded-full border-2 border-black bg-white z-10 group-hover:bg-[var(--color-turquoise)] transition-colors"></div>
+              </div>
+              <div class="flex-1 noise-bg p-8 border border-black/10 bg-[#f8f8f8] rounded-xl relative overflow-hidden transition-all duration-300 hover:border-black hover:shadow-lg">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                  <h3 class="text-xl font-bold pixel-zh-title flex items-center gap-3">
+                    <span class="bg-black text-white px-2 py-0.5 pixel-text text-sm">PHASE_03</span>
+                    业务并轨与交付
+                  </h3>
+                  <span class="px-2 py-1 border border-black/20 text-black/40 text-[10px] pixel-text rounded-sm">03_HANDOVER</span>
+                </div>
+                <p class="text-sm text-black/60 leading-relaxed mb-6">
+                  工具好用只是起点，人用起来才是终点。提供团队赋能培训、Prompt 工程教学与系统持续调优，确保 AI 真正长在业务循环里，实现效能飞轮。
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pixel-text text-xs text-black/60">
+                  <div class="flex items-center gap-2"><span class="font-bold text-black">✓</span> 团队效能赋能</div>
+                  <div class="flex items-center gap-2"><span class="font-bold text-black">✓</span> 生产力闭环跑通</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 用于撑开 Footer 高度的占位符 -->
+    <div id="footer-spacer"></div>
+  </div>
+
+  <!-- 底部 Footer 区块 (Fixed + Reveal Effect) -->
+  <footer id="footer" class="fixed bottom-0 left-0 w-full z-[5] bg-white border-t border-black/10 pointer-events-auto text-black/60 py-16 px-6 md:px-12 lg:px-16" style="visibility: hidden;">
+    <!-- 独立的噪点层，增加质感 (黑色噪点) -->
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%224%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22/%3E%3C/svg%3E')] opacity-[0.03] pointer-events-none mix-blend-multiply z-0"></div>
+
+    <div class="relative z-10 mx-auto max-w-[1920px]">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
+        <!-- 品牌与使命 -->
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-5 h-5 flex flex-wrap gap-[1px]">
+              <div class="w-[9px] h-[9px] bg-[var(--color-turquoise)] opacity-90"></div>
+              <div class="w-[9px] h-[9px] bg-black/30"></div>
+              <div class="w-[9px] h-[9px] bg-black/30"></div>
+              <div class="w-[9px] h-[9px] bg-black/80"></div>
+            </div>
+            <span class="pixel-text text-xl tracking-[0.2em] font-bold text-black">VOID LAB</span>
+          </div>
+          <p class="pixel-text text-sm text-black/50 mb-6 leading-relaxed max-w-sm">
+            We build AI assets, not toys.<br>
+            连接最硬核的 AI 开发者与企业主。这里没有焦虑，只有能落地的实战工作流与代码。
+          </p>
+          <div class="pixel-text text-xs bg-black text-[var(--color-turquoise)] px-2 py-1 inline-block">
+            > SYSTEM.STATUS: ONLINE
+          </div>
+        </div>
+
+        <!-- 矩阵导航 -->
+        <div>
+          <h4 class="text-black pixel-zh-title font-bold mb-6 text-sm tracking-widest">// MATRIX_LINKS</h4>
+          <ul class="space-y-3 pixel-text text-sm">
+            <li><a href="#services" class="text-black/60 hover:text-white hover:bg-black px-2 py-1 -mx-2 rounded transition-all">> 社区.Community</a></li>
+            <li><a href="#services" class="text-black/60 hover:text-white hover:bg-black px-2 py-1 -mx-2 rounded transition-all">> 资讯.Insights</a></li>
+            <li><a href="#consulting" class="text-black/60 hover:text-white hover:bg-black px-2 py-1 -mx-2 rounded transition-all">> 咨询.Consulting</a></li>
+            <li><a href="#deployment" class="text-black/60 hover:text-white hover:bg-black px-2 py-1 -mx-2 rounded transition-all">> 陪跑.Deployment</a></li>
+            <li><a href="#events" class="text-black/60 hover:text-white hover:bg-black px-2 py-1 -mx-2 rounded transition-all">> 活动.Events</a></li>
+          </ul>
+        </div>
+
+        <!-- 联系方式 -->
+        <div>
+          <h4 class="text-black pixel-zh-title font-bold mb-6 text-sm tracking-widest">// CONNECTION</h4>
+          <ul class="space-y-3 pixel-text text-sm">
+            <li>
+              <span class="text-black/40">Email: </span>
+              <a href="mailto:join@voidlab.ai" class="text-black/80 hover:text-white hover:bg-black px-1 -mx-1 transition-all">join@voidlab.ai</a>
+            </li>
+            <li>
+              <span class="text-black/40">WeChat: </span>
+              <span class="text-black/80 cursor-help hover:text-white hover:bg-black px-1 -mx-1 transition-all" title="请发送邮件获取内测邀请码">VOIDLAB_ASSISTANT</span>
+            </li>
+            <li>
+              <span class="text-black/40">Location: </span>
+              <span class="text-black/80">Shanghai, CN</span>
+            </li>
+          </ul>
+          <div class="mt-8">
+            <a href="#" class="inline-block border border-black/20 px-4 py-2 text-xs hover:border-black hover:bg-black hover:text-white transition-colors">
+              > APPLY_FOR_ACCESS
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部版权与终端日志 -->
+      <div class="pt-8 border-t border-black/10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="pixel-text text-[10px] text-black/40 tracking-widest">
+          © 2026 VOIDLAB.AI. ALL RIGHTS RESERVED.
+        </div>
+        <div class="pixel-text text-[10px] text-black/40 tracking-widest flex items-center gap-2">
+          [SYS_LOG] End of file. Connection closed. <span class="w-1.5 h-3 bg-black inline-block animate-pulse"></span>
+        </div>
+        <a href="#" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;" class="pixel-text text-[10px] text-black/60 hover:text-white hover:bg-black px-2 py-1 transition-colors flex items-center gap-1 cursor-pointer">
+          ^ /bin/bash: go_up
+        </a>
+      </div>
+
+    </div>
+  </footer>
+
+  <script>
+    /**
+     * 深空与灰度抖动像素星球生成器 (Bayer Dithering Planet)
+     */
+    const canvas = document.getElementById('space-canvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    let width, height;
+    let time = 0;
+    let scrollY = 0;
+
+    const footer = document.getElementById('footer');
+    const footerSpacer = document.getElementById('footer-spacer');
+    const deployment = document.getElementById('deployment');
+
+    window.addEventListener('scroll', () => {
+      scrollY = window.scrollY;
+      
+      // Footer Reveal Logic
+      if (footer && deployment) {
+        const rect = deployment.getBoundingClientRect();
+        // 当 deployment 的底部滚动到视口内部时，显示 footer
+        if (rect.bottom <= window.innerHeight + 10) {
+          footer.style.visibility = 'visible';
+        } else {
+          footer.style.visibility = 'hidden';
+        }
+      }
+    });
+
+    // 4x4 Bayer Dither Matrix
+    const bayer = [
+      [ 0,  8,  2, 10],
+      [12,  4, 14,  6],
+      [ 3, 11,  1,  9],
+      [15,  7, 13,  5]
+    ];
+
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+      
+      if (footer && footerSpacer) {
+        footerSpacer.style.height = footer.offsetHeight + 'px';
+      }
+    }
+    window.addEventListener('resize', resize);
+    
+    // 初始化调用
+    resize();
+    
+    // 将 hex 颜色转换为 rgba
+    function hexToRgba(hex, alpha = 1) {
+      let r = parseInt(hex.slice(1, 3), 16);
+      let g = parseInt(hex.slice(3, 5), 16);
+      let b = parseInt(hex.slice(5, 7), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    const colorBlack = '#121212';
+    const colorTurquoise = '#42FFD1';
+    const colorWhite = '#F8F8F8';
+
+    function drawScene() {
+      time += 0.01;
+      
+      const parallaxBgY = scrollY * 0.2;
+      const parallaxPlanetY = scrollY * 0.5;
+
+      // 偶尔触发 Glitch 抖动
+      const isGlitch = Math.random() > 0.98;
+      const glitchOffset = isGlitch ? (Math.random() - 0.5) * 10 : 0;
+
+      // 1. 深空背景 (Cosmic Black)
+      ctx.fillStyle = colorBlack;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. 绘制深空背景的抖动星尘与闪烁的星星
+      ctx.fillStyle = hexToRgba(colorWhite, 0.25); // 星尘恢复为灰白色
+      for(let i = 0; i < 800; i++) {
+        const seed = Math.sin(i * 123.456) * 10000;
+        const x = width * 0.7 + Math.sin(seed) * width * 0.8;
+        let y = height * 0.3 + Math.cos(seed) * height * 0.6 - parallaxBgY;
+        
+        if (y < -100) y = height + 100;
+        if (y > height + 100) y = -100;
+
+        const dist = Math.sqrt(Math.pow(x - width*0.7, 2) + Math.pow(y - height*0.3, 2));
+        if (Math.abs(Math.sin(seed * 2)) > dist / (width * 0.5)) {
+           ctx.fillRect(Math.floor(x/6)*6 + (isGlitch ? glitchOffset : 0), Math.floor(y/6)*6, 4, 4);
+        }
+      }
+
+      // 闪烁的单像素星星
+      for(let i = 0; i < 150; i++) {
+        const seed = Math.cos(i * 321.654) * 10000;
+        const x = Math.abs(Math.sin(seed)) * width;
+        let y = Math.abs(Math.cos(seed)) * height - parallaxBgY;
+        
+        if (y < 0) y += height;
+        if (y > height) y -= height;
+
+        const twinkle = (Math.sin(time * 5 + i) + 1) / 2; 
+        ctx.fillStyle = hexToRgba(colorWhite, twinkle * 0.8);
+        ctx.fillRect(Math.floor(x/3)*3, Math.floor(y/3)*3, 3, 3);
+      }
+
+      // 3. 绘制巨大的抖动像素星球 (带视差滚动)
+      const pixelSize = 6; 
+      const cx = width * 0.2 + glitchOffset; 
+      const cy = height * 0.9 - parallaxPlanetY; 
+      const radius = Math.min(width, height) * 0.55; 
+      
+      const lightDir = { x: -0.5, y: -0.8, z: 0.6 }; 
+      const len = Math.sqrt(lightDir.x**2 + lightDir.y**2 + lightDir.z**2);
+      lightDir.x /= len; lightDir.y /= len; lightDir.z /= len;
+
+      for(let y = cy - radius; y <= cy + radius; y += pixelSize) {
+        // 如果星球已经滚出屏幕可视区域上方，跳过渲染以优化性能
+        if (y < 0 || y > height) continue;
+
+        for(let x = cx - radius; x <= cx + radius; x += pixelSize) {
+          const dx = x - cx;
+          const dy = y - cy;
+          const dz2 = radius*radius - dx*dx - dy*dy;
+          
+          if(dz2 >= 0) { 
+            const dz = Math.sqrt(dz2);
+            const nx = dx / radius;
+            const ny = dy / radius;
+            const nz = dz / radius;
+            
+            let intensity = Math.max(0, nx*lightDir.x + ny*lightDir.y + nz*lightDir.z);
+            
+            const noise = Math.sin(nx * 8 + time) * Math.cos(ny * 8 - time*0.5) * 0.15 + Math.sin(nx * 4 + ny * 4 + time*2) * 0.1;
+            intensity += noise;
+
+            const rimLight = Math.pow(1 - nz, 3) * 0.3;
+            intensity += rimLight;
+
+            const matrixX = Math.abs(Math.floor(x / pixelSize)) % 4;
+            const matrixY = Math.abs(Math.floor(y / pixelSize)) % 4;
+            const threshold = (bayer[matrixY][matrixX] + 0.5) / 16;
+
+            if(intensity > threshold * 1.5) {
+              // 最亮的高光恢复为白色
+              ctx.fillStyle = hexToRgba(colorWhite, 0.9); 
+              ctx.fillRect(x, y, pixelSize, pixelSize);
+            } else if (intensity > threshold) {
+              // 灰色过渡恢复为白色
+              ctx.fillStyle = hexToRgba(colorWhite, 0.4); 
+              ctx.fillRect(x, y, pixelSize, pixelSize);
+            } else if (intensity > threshold * 0.4) {
+              // 暗部细节使用 White
+              ctx.fillStyle = hexToRgba(colorWhite, 0.15); 
+              ctx.fillRect(x, y, pixelSize, pixelSize);
+            }
+          }
+        }
+      }
+      
+      // 动画循环
+      requestAnimationFrame(drawScene);
+    }
+
+    // 初始化渲染
+    resize();
+    requestAnimationFrame(drawScene);
+
+    // 简单的鼠标移动视差效果
+    document.addEventListener('mousemove', (e) => {
+      const moveX = (e.clientX - width / 2) * 0.01;
+      const moveY = (e.clientY - height / 2) * 0.01;
+      canvas.style.transform = `translate(${moveX}px, ${moveY}px)`;
+    });
+
+    // --- 打字机效果逻辑 ---
+    const titleText = "探索 AI 的边界";
+    const titleEl = document.getElementById('hero-title');
+    const subtitleEl = document.getElementById('hero-subtitle');
+    let charIndex = 0;
+
+    function typeWriter() {
+      if (charIndex < titleText.length) {
+        // 逐字添加，并在末尾追加专属的黑色闪烁光标
+        titleEl.innerHTML = titleText.substring(0, charIndex + 1) + '<span class="typing-cursor-black"></span>';
+        charIndex++;
+        // 生成 100ms - 250ms 的随机延迟，模拟真实人类敲击键盘的节奏
+        const delay = Math.random() * 150 + 100;
+        setTimeout(typeWriter, delay);
+      } else {
+        // 标题打字结束，移除标题的光标
+        titleEl.innerHTML = titleText;
+        // 依次淡入显示副标题、按钮和数据面板
+        subtitleEl.classList.remove('opacity-0');
+        
+        setTimeout(() => {
+          document.getElementById('hero-ctas').classList.remove('opacity-0');
+        }, 400);
+
+        setTimeout(() => {
+          document.getElementById('hero-stats').classList.remove('opacity-0');
+        }, 800);
+      }
+    }
+    
+    // 延迟 600ms 后启动打字机，给页面和字体加载留出时间
+    setTimeout(typeWriter, 600);
+  </script>
+</body>
+</html>

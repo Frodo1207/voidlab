@@ -1,0 +1,148 @@
+@font-face {
+  font-family: "Zpix";
+  src: url("https://unpkg.com/zpix-browser/dist/zpix.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --color-turquoise: #42ffd1;
+  --color-black: #121212;
+  --color-white: #f8f8f8;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  background-color: var(--color-black);
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-family: "Noto Sans SC", sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body.theme-light {
+  background-color: #fbfbfa;
+  color: #37352f;
+}
+
+#app {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+}
+
+button {
+  background: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(248, 248, 248, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-turquoise);
+}
+
+body.theme-light ::-webkit-scrollbar-track {
+  background: #fbfbfa;
+}
+
+body.theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(55, 53, 47, 0.22);
+}
+
+body.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(55, 53, 47, 0.35);
+}
+
+.pixel-text {
+  font-family: "VT323", monospace;
+  letter-spacing: 0.1em;
+  color: var(--color-turquoise);
+}
+
+.typing-cursor::after {
+  content: "_";
+  animation: blink 1s step-end infinite;
+}
+
+.typing-cursor-black::after {
+  content: "_";
+  color: var(--color-black);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.pixel-zh-title {
+  font-family: "Fusion Pixel 12px Mono zh_hans", "Zpix", monospace;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  font-smooth: never;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.noise-bg {
+  position: relative;
+}
+
+.noise-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.content-layer {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
