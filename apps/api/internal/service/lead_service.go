@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"voidlabai/apps/api/internal/domain"
@@ -11,6 +12,12 @@ import (
 
 type LeadService struct {
 	repo *repository.LeadRepository
+}
+
+type LeadListInput struct {
+	SourceType string
+	SourceID   *int64
+	Status     string
 }
 
 type LeadInput struct {
@@ -37,8 +44,30 @@ func NewLeadService(repo *repository.LeadRepository) *LeadService {
 	return &LeadService{repo: repo}
 }
 
-func (s *LeadService) List() ([]domain.Lead, error) {
-	return s.repo.List()
+func (s *LeadService) List(input LeadListInput) ([]domain.Lead, error) {
+	filter := repository.LeadListFilter{}
+
+	sourceType := strings.TrimSpace(input.SourceType)
+	if sourceType != "" {
+		if !isValidLeadSourceType(sourceType) {
+			return nil, errors.New("invalid lead source type")
+		}
+		filter.SourceType = sourceType
+	}
+
+	if input.SourceID != nil {
+		filter.SourceID = input.SourceID
+	}
+
+	status := strings.TrimSpace(input.Status)
+	if status != "" {
+		if !isValidLeadStatus(status) {
+			return nil, errors.New("invalid lead status")
+		}
+		filter.Status = status
+	}
+
+	return s.repo.List(filter)
 }
 
 func (s *LeadService) GetByID(id int64) (domain.Lead, error) {
@@ -130,6 +159,8 @@ func validateLeadInput(input LeadInput) (repository.LeadCreateParams, error) {
 		return repository.LeadCreateParams{}, err
 	}
 
+	dedupeKey := buildLeadDedupeKey(sourceType, input.SourceID, contact)
+
 	return repository.LeadCreateParams{
 		SourceType: sourceType,
 		SourceID:   input.SourceID,
@@ -138,6 +169,7 @@ func validateLeadInput(input LeadInput) (repository.LeadCreateParams, error) {
 		Message:    strings.TrimSpace(input.Message),
 		Status:     status,
 		Notes:      strings.TrimSpace(input.Notes),
+		DedupeKey:  dedupeKey,
 		OwnerID:    input.OwnerID,
 	}, nil
 }
@@ -153,9 +185,22 @@ func isValidLeadSourceType(value string) bool {
 
 func isValidLeadStatus(value string) bool {
 	switch value {
-	case "new", "contacted", "following", "converted", "invalid":
+	case "new", "applied", "approved", "waitlisted", "rejected", "checked_in", "contacted", "following", "converted", "invalid":
 		return true
 	default:
 		return false
 	}
+}
+
+func buildLeadDedupeKey(sourceType string, sourceID *int64, contact string) string {
+	if sourceType != "event" || sourceID == nil {
+		return ""
+	}
+
+	normalizedContact := strings.ToLower(strings.TrimSpace(contact))
+	if normalizedContact == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%s#event#%d", normalizedContact, *sourceID)
 }

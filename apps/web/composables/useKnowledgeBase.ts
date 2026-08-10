@@ -3,6 +3,7 @@ import { resolvePublicApiPath, resolveUploadsUrl } from "../src/runtimeConfig";
 
 export type KnowledgeVisibilityMode = "directory_only" | "public" | "private_hidden";
 export type KnowledgeEntryStatus = "published" | "draft" | "archived";
+export type KnowledgeAccessState = "public" | "unlocked" | "locked";
 
 type ApiEnvelope<T> = {
   code: number;
@@ -499,6 +500,19 @@ export function isSpaceUnlocked(spaceSlug: string) {
   return Boolean(findGrantRecord(spaceSlug));
 }
 
+export function isSpacePublic(spaceSlug: string) {
+  const space = getSpaceBySlug(spaceSlug);
+  return space?.visibilityMode === "public";
+}
+
+export function getSpaceAccessState(spaceSlug: string): KnowledgeAccessState {
+  if (isSpacePublic(spaceSlug)) {
+    return "public";
+  }
+
+  return isSpaceUnlocked(spaceSlug) ? "unlocked" : "locked";
+}
+
 export function getSpaceGrant(spaceSlug: string) {
   ensureGrantsLoaded();
   return findGrantRecord(spaceSlug)?.grant || "";
@@ -510,7 +524,7 @@ export function canReadEntry(spaceSlug: string, entrySlug: string) {
     return false;
   }
 
-  return entry.isPreview || isSpaceUnlocked(spaceSlug);
+  return entry.isPreview || isSpacePublic(spaceSlug) || isSpaceUnlocked(spaceSlug);
 }
 
 export async function unlockKnowledgeSpace(spaceSlug: string, token: string) {
@@ -620,6 +634,8 @@ export function useKnowledgeBase() {
     getSpaceBySlug,
     getEntriesBySpace,
     getEntryBySlug,
+    isSpacePublic,
+    getSpaceAccessState,
     isSpaceUnlocked,
     getSpaceGrant,
     canReadEntry,

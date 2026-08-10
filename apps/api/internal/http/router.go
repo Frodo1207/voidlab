@@ -163,13 +163,13 @@ func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
 			protected.PUT("/knowledge/access-tokens/:id/status", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"knowledge_tokens:write"}), knowledgeHandler.UpdateAccessTokenStatus)
 
 			leadOperations := protected.Group("/")
-			leadOperations.Use(middleware.RequireAnyRole("admin", "ops"))
+			leadOperations.Use(middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:read", "leads:write"}))
 			{
-				leadOperations.GET("/leads", leadHandler.List)
-				leadOperations.GET("/leads/:id", leadHandler.Detail)
-				leadOperations.POST("/leads", leadHandler.Create)
-				leadOperations.PUT("/leads/:id/status", leadHandler.UpdateStatus)
-				leadOperations.POST("/leads/:id/logs", leadHandler.AddLog)
+				leadOperations.GET("/leads", middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:read", "leads:write"}), leadHandler.List)
+				leadOperations.GET("/leads/:id", middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:read", "leads:write"}), leadHandler.Detail)
+				leadOperations.POST("/leads", middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:write"}), leadHandler.Create)
+				leadOperations.PUT("/leads/:id/status", middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:write"}), leadHandler.UpdateStatus)
+				leadOperations.POST("/leads/:id/logs", middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:write"}), leadHandler.AddLog)
 			}
 
 			siteSettings := protected.Group("/")

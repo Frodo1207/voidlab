@@ -18,6 +18,10 @@ html {
   background-color: var(--color-black);
 }
 
+html.theme-light {
+  background-color: #f6f5f1;
+}
+
 body {
   margin: 0;
   background-color: var(--color-black);
@@ -28,14 +32,16 @@ body {
 }
 
 body.theme-light {
-  background-color: #fbfbfa;
+  background-color: #f6f5f1;
   color: #37352f;
 }
 
 #app {
   width: 100%;
   max-width: 100%;
+  min-height: 100vh;
   overflow-x: hidden;
+  background-color: inherit;
 }
 
 a {
@@ -63,7 +69,7 @@ button {
 }
 
 body.theme-light ::-webkit-scrollbar-track {
-  background: #fbfbfa;
+  background: #f6f5f1;
 }
 
 body.theme-light ::-webkit-scrollbar-thumb {

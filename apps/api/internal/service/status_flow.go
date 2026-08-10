@@ -27,6 +27,30 @@ var allowedLeadStatusTransitions = map[string]map[string]struct{}{
 		"contacted": {},
 		"invalid":   {},
 	},
+	"applied": {
+		"approved":   {},
+		"waitlisted": {},
+		"rejected":   {},
+		"invalid":    {},
+	},
+	"approved": {
+		"checked_in": {},
+		"waitlisted": {},
+		"rejected":   {},
+		"invalid":    {},
+	},
+	"waitlisted": {
+		"approved": {},
+		"rejected": {},
+		"invalid":  {},
+	},
+	"rejected": {
+		"approved": {},
+		"invalid":  {},
+	},
+	"checked_in": {
+		"converted": {},
+	},
 	"contacted": {
 		"following": {},
 		"invalid":   {},

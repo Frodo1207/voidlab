@@ -15,6 +15,8 @@ const {
   getEntriesBySpace,
   getSpaceBySlug,
   canReadEntry,
+  getSpaceAccessState,
+  isSpacePublic,
   isSpaceUnlocked,
   resolveKnowledgeAssetUrl,
   loadKnowledgeSpaceBySlug,
@@ -35,6 +37,7 @@ const mobileTocOpen = ref(false);
 const space = computed(() => getSpaceBySlug(spaceSlug.value));
 const entry = computed(() => getEntryBySlug(spaceSlug.value, entrySlug.value));
 const canRead = computed(() => canReadEntry(spaceSlug.value, entrySlug.value));
+const accessState = computed(() => getSpaceAccessState(spaceSlug.value));
 const hasRenderableContent = computed(() => Boolean(entry.value?.contentMarkdown?.trim()));
 const renderedContent = computed(() =>
   entry.value
@@ -205,7 +208,7 @@ watch(
         return;
       }
 
-      if (currentEntry.isPreview || isSpaceUnlocked(nextSpaceSlug)) {
+      if (currentEntry.isPreview || isSpacePublic(nextSpaceSlug) || isSpaceUnlocked(nextSpaceSlug)) {
         await loadKnowledgeEntryBySlug(nextSpaceSlug, nextEntrySlug, true);
       }
 
@@ -491,9 +494,17 @@ watch(
               <span>·</span>
               <span
                 class="rounded px-2 py-0.5 text-[13px]"
-                :class="entry.isPreview ? 'bg-[#e0f2fe] text-[#1e3a8a]' : canRead ? 'bg-[#dcfce7] text-[#14532d]' : 'bg-[#ffedd5] text-[#9a3412]'"
+                :class="
+                  entry.isPreview
+                    ? 'bg-[#e0f2fe] text-[#1e3a8a]'
+                    : accessState === 'public'
+                      ? 'bg-[#ede9fe] text-[#5b21b6]'
+                      : canRead
+                        ? 'bg-[#dcfce7] text-[#14532d]'
+                        : 'bg-[#ffedd5] text-[#9a3412]'
+                "
               >
-                {{ entry.isPreview ? "Preview" : canRead ? "Unlocked" : "Locked" }}
+                {{ entry.isPreview ? "Preview" : accessState === "public" ? "Public" : canRead ? "Unlocked" : "Locked" }}
               </span>
             </div>
 

@@ -20,6 +20,21 @@ export function resolveUploadsUrl(value: string) {
   }
 
   if (rawValue.startsWith("http://") || rawValue.startsWith("https://") || rawValue.startsWith("data:")) {
+    if (rawValue.startsWith("data:")) {
+      return rawValue;
+    }
+
+    try {
+      const url = new URL(rawValue);
+      if (url.pathname.startsWith("/uploads/")) {
+        // 兼容历史数据里写死的 IP / HTTP 资源地址。
+        // 在当前 HTTPS / 域名环境下统一改写成同源 uploads 路径，避免 mixed-content。
+        return `${resolvePublicApiPath(url.pathname)}${url.search}${url.hash}`;
+      }
+    } catch {
+      return rawValue;
+    }
+
     return rawValue;
   }
 

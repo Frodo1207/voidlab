@@ -24,9 +24,23 @@ func NewLeadHandler(leadService *service.LeadService, auditLogService *service.A
 }
 
 func (h *LeadHandler) List(ctx *gin.Context) {
-	leads, err := h.leadService.List()
+	var sourceID *int64
+	if rawSourceID := ctx.Query("source_id"); rawSourceID != "" {
+		parsedSourceID, parseErr := strconv.ParseInt(rawSourceID, 10, 64)
+		if parseErr != nil {
+			Fail(ctx, stdhttp.StatusBadRequest, 4302, "invalid source id")
+			return
+		}
+		sourceID = &parsedSourceID
+	}
+
+	leads, err := h.leadService.List(service.LeadListInput{
+		SourceType: ctx.Query("source_type"),
+		SourceID:   sourceID,
+		Status:     ctx.Query("status"),
+	})
 	if err != nil {
-		Fail(ctx, stdhttp.StatusInternalServerError, 5301, "failed to list leads")
+		Fail(ctx, stdhttp.StatusBadRequest, 4304, err.Error())
 		return
 	}
 

@@ -62,13 +62,15 @@ export type FeaturedContentSlotsConfig = {
   insightsLimit: number;
 };
 
+const SOCIAL_NETWORK_PATH = "/builders";
+
 const defaultHomeBanner: HomeBannerConfig = {
   titleText: "探索 AI 的边界",
   subtitle: "我们构建 AI 资产，不做玩具。",
-  primaryCtaLabel: "连接社交网络",
-  primaryCtaPath: "/builders",
-  secondaryCtaLabel: "查看社区活动",
-  secondaryCtaPath: "/events",
+  primaryCtaLabel: "查看社区活动",
+  primaryCtaPath: "/events",
+  secondaryCtaLabel: "联系我们",
+  secondaryCtaPath: "/contact",
   statusLabel: "系统状态 // 社区指标"
 };
 
@@ -118,7 +120,6 @@ const defaultFooterConfig: FooterConfig = {
   navLinks: [
     { label: "首页", path: "/" },
     { label: "活动", path: "/events" },
-    { label: "社交网络", path: "/builders" },
     { label: "资讯", path: "/insights" },
     { label: "联系我们", path: "/contact" }
   ],
@@ -128,7 +129,7 @@ const defaultFooterConfig: FooterConfig = {
 const defaultGlobalCta: GlobalCtaConfig = {
   eyebrow: "NEXT ACTION",
   title: "准备把想法变成活动、内容或合作项目？",
-  description: "如果你想和 VOIDLAB 一起办活动、发起合作、加入网络或咨询 AI 落地方案，可以直接从这里进入下一步。",
+  description: "如果你想和 VOIDLAB 一起办活动、发起合作或咨询 AI 落地方案，可以直接从这里进入下一步。",
   primaryLabel: "提交合作意向",
   primaryPath: "/contact",
   secondaryLabel: "查看活动",
@@ -168,6 +169,10 @@ const loadedState = ref(false);
 const errorState = ref("");
 
 let loadPromise: Promise<SiteConfigMap> | null = null;
+
+function isHiddenPath(path: string) {
+  return path.trim() === SOCIAL_NETWORK_PATH;
+}
 
 async function requestPublicConfigs() {
   const response = await fetch(resolvePublicApiPath("/api/v1/public/site-configs"));
@@ -217,7 +222,19 @@ export function useSiteConfigs() {
 
   const homeBanner = computed<HomeBannerConfig>(() => ({
     ...defaultHomeBanner,
-    ...(siteConfigState.value.home_banner ?? {})
+    ...(siteConfigState.value.home_banner ?? {}),
+    primaryCtaLabel: isHiddenPath(siteConfigState.value.home_banner?.primaryCtaPath ?? "")
+      ? defaultHomeBanner.primaryCtaLabel
+      : (siteConfigState.value.home_banner?.primaryCtaLabel ?? defaultHomeBanner.primaryCtaLabel),
+    primaryCtaPath: isHiddenPath(siteConfigState.value.home_banner?.primaryCtaPath ?? "")
+      ? defaultHomeBanner.primaryCtaPath
+      : (siteConfigState.value.home_banner?.primaryCtaPath ?? defaultHomeBanner.primaryCtaPath),
+    secondaryCtaLabel: isHiddenPath(siteConfigState.value.home_banner?.secondaryCtaPath ?? "")
+      ? defaultHomeBanner.secondaryCtaLabel
+      : (siteConfigState.value.home_banner?.secondaryCtaLabel ?? defaultHomeBanner.secondaryCtaLabel),
+    secondaryCtaPath: isHiddenPath(siteConfigState.value.home_banner?.secondaryCtaPath ?? "")
+      ? defaultHomeBanner.secondaryCtaPath
+      : (siteConfigState.value.home_banner?.secondaryCtaPath ?? defaultHomeBanner.secondaryCtaPath)
   }));
 
   const homeFeatured = computed<HomeFeaturedConfig>(() => ({
@@ -232,10 +249,13 @@ export function useSiteConfigs() {
 
   const footerConfig = computed<FooterConfig>(() => {
     const config = siteConfigState.value.footer_config ?? {};
+    const navLinks = Array.isArray(config.navLinks) && config.navLinks.length > 0
+      ? config.navLinks.filter((item) => !isHiddenPath(item.path))
+      : defaultFooterConfig.navLinks;
     return {
       ...defaultFooterConfig,
       ...config,
-      navLinks: Array.isArray(config.navLinks) && config.navLinks.length > 0 ? config.navLinks : defaultFooterConfig.navLinks
+      navLinks
     };
   });
 

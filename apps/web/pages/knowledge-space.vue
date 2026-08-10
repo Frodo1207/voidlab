@@ -13,6 +13,7 @@ const route = useRoute();
 const router = useRouter();
 const {
   getEntriesBySpace,
+  getSpaceAccessState,
   getSpaceBySlug,
   isSpaceUnlocked,
   resolveKnowledgeAssetUrl,
@@ -47,6 +48,7 @@ const groupedEntries = computed(() => {
   }));
 });
 const unlocked = computed(() => isSpaceUnlocked(spaceSlug.value));
+const accessState = computed(() => getSpaceAccessState(spaceSlug.value));
 const renderedIntro = computed(() =>
   space.value
     ? renderMarkdown(space.value.introMarkdown, {
@@ -56,7 +58,10 @@ const renderedIntro = computed(() =>
 );
 const coverStyle = computed(() => {
   if (!space.value?.coverUrl) {
-    return undefined;
+    return {
+      backgroundImage:
+        "linear-gradient(135deg, #eef2f6 0%, #f8fafc 45%, #ffffff 100%)"
+    };
   }
 
   return {
@@ -264,7 +269,13 @@ onBeforeUnmount(() => {
             <span>最后更新: {{ space.lastUpdatedAt }}</span>
             <span>·</span>
             <span class="font-medium" :class="unlocked ? 'text-[#0f7b6c]' : 'text-[#d97706]'">
-              {{ unlocked ? "已解锁正文" : "正文需令牌解锁" }}
+              {{
+                accessState === "public"
+                  ? "全部公开"
+                  : unlocked
+                    ? "已解锁正文"
+                    : "正文需令牌解锁"
+              }}
             </span>
           </div>
 
@@ -274,10 +285,27 @@ onBeforeUnmount(() => {
           <!-- Unlock Banner -->
           <div class="mt-8 mb-12 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded bg-[#f7f7f5] px-5 py-4 border border-[#e9e9e7]">
             <div class="text-[14px]">
-              <span class="font-semibold">{{ unlocked ? "🎉 Space 已解锁" : "🔒 需要访问令牌" }}</span>
-              <span class="ml-2 text-[#787774]">{{ unlocked ? "你可以连续阅读全部正文内容。" : space.tokenHint }}</span>
+              <span class="font-semibold">
+                {{
+                  accessState === "public"
+                    ? "🌍 Space 公开访问"
+                    : unlocked
+                      ? "🎉 Space 已解锁"
+                      : "🔒 需要访问令牌"
+                }}
+              </span>
+              <span class="ml-2 text-[#787774]">
+                {{
+                  accessState === "public"
+                    ? "这个 Space 的目录和正文都可以直接阅读。"
+                    : unlocked
+                      ? "你可以连续阅读全部正文内容。"
+                      : space.tokenHint
+                }}
+              </span>
             </div>
             <button
+              v-if="accessState !== 'public'"
               type="button"
               class="text-[14px] font-medium transition-colors whitespace-nowrap"
               :class="unlocked ? 'hover:text-[#eb5757] text-[#787774]' : 'hover:text-[#0f7b6c] text-[#37352f]'"
@@ -310,9 +338,17 @@ onBeforeUnmount(() => {
                     <span class="text-[#9ca3af] hidden sm:inline">{{ entry.estimatedReadMinutes }} min read</span>
                     <span
                       class="rounded px-2 py-0.5"
-                      :class="entry.isPreview ? 'bg-[#e0f2fe] text-[#1e3a8a]' : unlocked ? 'bg-[#dcfce7] text-[#14532d]' : 'bg-[#ffedd5] text-[#9a3412]'"
+                      :class="
+                        entry.isPreview
+                          ? 'bg-[#e0f2fe] text-[#1e3a8a]'
+                          : accessState === 'public'
+                            ? 'bg-[#ede9fe] text-[#5b21b6]'
+                            : unlocked
+                              ? 'bg-[#dcfce7] text-[#14532d]'
+                              : 'bg-[#ffedd5] text-[#9a3412]'
+                      "
                     >
-                      {{ entry.isPreview ? "Preview" : unlocked ? "Unlocked" : "Locked" }}
+                      {{ entry.isPreview ? "Preview" : accessState === "public" ? "Public" : unlocked ? "Unlocked" : "Locked" }}
                     </span>
                   </div>
                 </RouterLink>

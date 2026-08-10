@@ -7,6 +7,12 @@ import (
 	"voidlabai/apps/api/internal/domain"
 )
 
+type LeadListFilter struct {
+	SourceType string
+	SourceID   *int64
+	Status     string
+}
+
 type LeadCreateParams struct {
 	SourceType string
 	SourceID   *int64
@@ -15,6 +21,7 @@ type LeadCreateParams struct {
 	Message    string
 	Status     string
 	Notes      string
+	DedupeKey  string
 	OwnerID    *int64
 }
 
@@ -25,14 +32,34 @@ type LeadLogCreateParams struct {
 	CreatedBy int64
 }
 
-func (r *LeadRepository) List() ([]domain.Lead, error) {
-	rows, err := r.db.Query(`
-                SELECT id, source_type, source_id, name, contact, message, status, notes, owner_id,
+func (r *LeadRepository) List(filter LeadListFilter) ([]domain.Lead, error) {
+	query := `
+                SELECT id, source_type, source_id, name, contact, message, status, notes, dedupe_key, owner_id,
                        strftime('%Y-%m-%d %H:%M', created_at),
                        strftime('%Y-%m-%d %H:%M', updated_at)
                 FROM leads
-                ORDER BY created_at DESC, id DESC
-        `)
+        `
+	clauses := make([]string, 0, 3)
+	args := make([]any, 0, 3)
+
+	if filter.SourceType != "" {
+		clauses = append(clauses, "source_type = ?")
+		args = append(args, filter.SourceType)
+	}
+	if filter.SourceID != nil {
+		clauses = append(clauses, "source_id = ?")
+		args = append(args, *filter.SourceID)
+	}
+	if filter.Status != "" {
+		clauses = append(clauses, "status = ?")
+		args = append(args, filter.Status)
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY created_at DESC, id DESC"
+
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +79,7 @@ func (r *LeadRepository) List() ([]domain.Lead, error) {
 
 func (r *LeadRepository) GetByID(id int64) (domain.Lead, error) {
 	row := r.db.QueryRow(`
-                SELECT id, source_type, source_id, name, contact, message, status, notes, owner_id,
+                SELECT id, source_type, source_id, name, contact, message, status, notes, dedupe_key, owner_id,
                        strftime('%Y-%m-%d %H:%M', created_at),
                        strftime('%Y-%m-%d %H:%M', updated_at)
                 FROM leads
@@ -66,8 +93,8 @@ func (r *LeadRepository) GetByID(id int64) (domain.Lead, error) {
 func (r *LeadRepository) Create(params LeadCreateParams) (int64, error) {
 	result, err := r.db.Exec(`
                 INSERT INTO leads (
-                        source_type, source_id, name, contact, message, status, notes, owner_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        source_type, source_id, name, contact, message, status, notes, dedupe_key, owner_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
 		params.SourceType,
 		params.SourceID,
@@ -76,6 +103,7 @@ func (r *LeadRepository) Create(params LeadCreateParams) (int64, error) {
 		params.Message,
 		params.Status,
 		params.Notes,
+		params.DedupeKey,
 		params.OwnerID,
 	)
 	if err != nil {
@@ -178,11 +206,11 @@ func (r *LeadRepository) StatusCounts() (domain.LeadStatusStats, error) {
 
 func (r *LeadRepository) ListActionable(limit int) ([]domain.Lead, error) {
 	rows, err := r.db.Query(`
-		SELECT id, source_type, source_id, name, contact, message, status, notes, owner_id,
+                SELECT id, source_type, source_id, name, contact, message, status, notes, dedupe_key, owner_id,
 		       strftime('%Y-%m-%d %H:%M', created_at),
 		       strftime('%Y-%m-%d %H:%M', updated_at)
 		FROM leads
-		WHERE status IN ('new', 'contacted', 'following')
+                WHERE status IN ('new', 'applied', 'approved', 'waitlisted', 'contacted', 'following')
 		ORDER BY updated_at DESC, id DESC
 		LIMIT ?
 	`, limit)
@@ -223,6 +251,7 @@ func scanLead(scanner leadScanner) (domain.Lead, error) {
 		&lead.Message,
 		&lead.Status,
 		&lead.Notes,
+		&lead.DedupeKey,
 		&ownerID,
 		&createdAt,
 		&updatedAt,

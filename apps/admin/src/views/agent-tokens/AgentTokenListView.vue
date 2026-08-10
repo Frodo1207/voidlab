@@ -24,6 +24,8 @@ const scopeOptions: { value: AgentScope; label: string; description: string }[] 
   { value: "articles:write", label: "文章写入", description: "创建、更新、发布文章" },
   { value: "events:read", label: "活动读取", description: "读取活动列表和详情" },
   { value: "events:write", label: "活动写入", description: "创建、更新活动" },
+  { value: "leads:read", label: "报名信息读取", description: "读取报名名单、联系方式和报名详情" },
+  { value: "leads:write", label: "报名信息写入", description: "创建报名、更新报名状态和跟进记录" },
   { value: "builders:read", label: "Builder 读取", description: "读取 Builder 列表和详情" },
   { value: "builders:write", label: "Builder 写入", description: "创建、更新 Builder" },
   { value: "knowledge:read", label: "知识库读取", description: "读取知识空间、目录与文档" },

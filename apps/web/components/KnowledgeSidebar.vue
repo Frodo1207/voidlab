@@ -16,7 +16,7 @@ const props = withDefaults(
 );
 
 const route = useRoute();
-const { getSpaceBySlug, getEntriesBySpace, isSpaceUnlocked, loadKnowledgeSpaceBySlug } = useKnowledgeBase();
+const { getSpaceBySlug, getEntriesBySpace, getSpaceAccessState, loadKnowledgeSpaceBySlug } = useKnowledgeBase();
 const { sidebarCollapsed, toggleSidebar, sidebarDrawerOpen, closeSidebarDrawer } = useKnowledgeSidebar();
 
 const spaceSlug = computed(() => String(route.params.spaceSlug ?? ""));
@@ -234,9 +234,33 @@ watch(
       <div class="text-2xl flex-shrink-0">{{ space.icon }}</div>
       <div v-if="!desktopCollapsed" class="min-w-0 flex-1">
         <div class="text-[15px] font-bold text-[#333333] leading-tight truncate">{{ space.title }}</div>
-        <div class="text-[12px] mt-1 flex items-center gap-1.5" :class="isSpaceUnlocked(space.slug) ? 'text-[#0f7b6c]' : 'text-[#d97706]'">
-          <span class="inline-block w-1.5 h-1.5 rounded-full" :class="isSpaceUnlocked(space.slug) ? 'bg-[#0f7b6c]' : 'bg-[#d97706]'"></span>
-          {{ isSpaceUnlocked(space.slug) ? '已解锁' : '需令牌' }}
+        <div
+          class="text-[12px] mt-1 flex items-center gap-1.5"
+          :class="
+            getSpaceAccessState(space.slug) === 'public'
+              ? 'text-[#6d28d9]'
+              : getSpaceAccessState(space.slug) === 'unlocked'
+                ? 'text-[#0f7b6c]'
+                : 'text-[#d97706]'
+          "
+        >
+          <span
+            class="inline-block w-1.5 h-1.5 rounded-full"
+            :class="
+              getSpaceAccessState(space.slug) === 'public'
+                ? 'bg-[#6d28d9]'
+                : getSpaceAccessState(space.slug) === 'unlocked'
+                  ? 'bg-[#0f7b6c]'
+                  : 'bg-[#d97706]'
+            "
+          ></span>
+          {{
+            getSpaceAccessState(space.slug) === "public"
+              ? "公开"
+              : getSpaceAccessState(space.slug) === "unlocked"
+                ? "已解锁"
+                : "需令牌"
+          }}
         </div>
       </div>
     </RouterLink>

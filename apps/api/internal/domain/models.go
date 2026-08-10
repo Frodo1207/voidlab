@@ -61,18 +61,30 @@ type Article struct {
 }
 
 type Event struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	Slug      string `json:"slug"`
-	Summary   string `json:"summary"`
-	City      string `json:"city"`
-	Location  string `json:"location"`
-	EventType string `json:"event_type"`
-	EventTime string `json:"event_time"`
-	Content   string `json:"content"`
-	CoverURL  string `json:"cover_url"`
-	Status    string `json:"status"`
-	UpdatedAt string `json:"updated_at"`
+	ID                    int64  `json:"id"`
+	Title                 string `json:"title"`
+	Slug                  string `json:"slug"`
+	Summary               string `json:"summary"`
+	City                  string `json:"city"`
+	Location              string `json:"location"`
+	EventType             string `json:"event_type"`
+	EventTime             string `json:"event_time"`
+	Content               string `json:"content"`
+	CoverURL              string `json:"cover_url"`
+	Status                string `json:"status"`
+	SignupMode            string `json:"signup_mode"`
+	SignupStatus          string `json:"signup_status"`
+	SignupEnabled         bool   `json:"signup_enabled"`
+	SignupStartsAt        string `json:"signup_starts_at"`
+	SignupDeadline        string `json:"signup_deadline"`
+	Capacity              int64  `json:"capacity"`
+	SignupCount           int64  `json:"signup_count"`
+	AllowSignupDuringLive bool   `json:"allow_signup_during_live"`
+	ExternalSignupURL     string `json:"external_signup_url"`
+	SignupButtonLabel     string `json:"signup_button_label"`
+	SignupSuccessMessage  string `json:"signup_success_message"`
+	SignupClosedReason    string `json:"signup_closed_reason"`
+	UpdatedAt             string `json:"updated_at"`
 }
 
 type Builder struct {
@@ -113,6 +125,7 @@ type Lead struct {
 	Message    string    `json:"message"`
 	Status     string    `json:"status"`
 	Notes      string    `json:"notes"`
+	DedupeKey  string    `json:"dedupe_key"`
 	OwnerID    *int64    `json:"owner_id,omitempty"`
 	CreatedAt  string    `json:"created_at"`
 	UpdatedAt  string    `json:"updated_at"`

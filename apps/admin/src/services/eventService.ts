@@ -13,6 +13,18 @@ interface ApiEventRecord {
   content: string;
   cover_url: string;
   status: ContentStatus;
+  signup_mode: "internal" | "external" | "closed";
+  signup_status: string;
+  signup_enabled: boolean;
+  signup_starts_at: string;
+  signup_deadline: string;
+  capacity: number;
+  signup_count: number;
+  allow_signup_during_live: boolean;
+  external_signup_url: string;
+  signup_button_label: string;
+  signup_success_message: string;
+  signup_closed_reason: string;
   updated_at: string;
 }
 
@@ -27,6 +39,16 @@ export interface EventPayload {
   cover_url: string;
   content: string;
   status: ContentStatus;
+  signup_mode: "internal" | "external" | "closed";
+  signup_enabled: boolean;
+  signup_starts_at: string;
+  signup_deadline: string;
+  capacity: number;
+  allow_signup_during_live: boolean;
+  external_signup_url: string;
+  signup_button_label: string;
+  signup_success_message: string;
+  signup_closed_reason: string;
 }
 
 export async function listEvents(): Promise<EventRecord[]> {
@@ -74,6 +96,18 @@ function mapEvent(record: ApiEventRecord): EventRecord {
     content: record.content,
     coverUrl: record.cover_url,
     status: record.status,
+    signupMode: record.signup_mode,
+    signupStatus: record.signup_status,
+    signupEnabled: record.signup_enabled,
+    signupStartsAt: record.signup_starts_at,
+    signupDeadline: record.signup_deadline,
+    capacity: record.capacity,
+    signupCount: record.signup_count,
+    allowSignupDuringLive: record.allow_signup_during_live,
+    externalSignupUrl: record.external_signup_url,
+    signupButtonLabel: record.signup_button_label,
+    signupSuccessMessage: record.signup_success_message,
+    signupClosedReason: record.signup_closed_reason,
     updatedAt: record.updated_at
   };
 }

@@ -3,6 +3,7 @@ import { extractMarkdownExcerpt } from "../src/markdown";
 
 export type KnowledgeVisibilityMode = "directory_only" | "public" | "private_hidden";
 export type KnowledgeEntryStatus = "published" | "draft";
+export type KnowledgeAccessState = "public" | "unlocked" | "locked";
 
 export interface KnowledgeEntry {
   id: number;
@@ -372,13 +373,26 @@ export function useKnowledgeBaseDemo() {
     return Boolean(unlockState.value[spaceSlug]);
   }
 
+  function isSpacePublic(spaceSlug: string) {
+    const space = getSpaceBySlug(spaceSlug);
+    return space?.visibilityMode === "public";
+  }
+
+  function getSpaceAccessState(spaceSlug: string): KnowledgeAccessState {
+    if (isSpacePublic(spaceSlug)) {
+      return "public";
+    }
+
+    return isSpaceUnlocked(spaceSlug) ? "unlocked" : "locked";
+  }
+
   function canReadEntry(spaceSlug: string, entrySlug: string) {
     const entry = getEntryBySlug(spaceSlug, entrySlug);
     if (!entry) {
       return false;
     }
 
-    return entry.isPreview || isSpaceUnlocked(spaceSlug);
+    return entry.isPreview || isSpacePublic(spaceSlug) || isSpaceUnlocked(spaceSlug);
   }
 
   function unlockSpace(spaceSlug: string, token: string) {
@@ -429,6 +443,8 @@ export function useKnowledgeBaseDemo() {
     getSpaceBySlug,
     getEntriesBySpace,
     getEntryBySlug,
+    isSpacePublic,
+    getSpaceAccessState,
     isSpaceUnlocked,
     canReadEntry,
     unlockSpace,

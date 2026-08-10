@@ -17,6 +17,8 @@ var allowedAgentScopes = map[string]struct{}{
 	"articles:write":         {},
 	"events:read":            {},
 	"events:write":           {},
+	"leads:read":             {},
+	"leads:write":            {},
 	"builders:read":          {},
 	"builders:write":         {},
 	"knowledge:read":         {},

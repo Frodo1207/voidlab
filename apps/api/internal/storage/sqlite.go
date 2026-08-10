@@ -93,6 +93,16 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
                         cover_url TEXT NOT NULL DEFAULT '',
                         cover_media_id INTEGER,
                         content TEXT NOT NULL DEFAULT '',
+                        signup_mode TEXT NOT NULL DEFAULT 'internal',
+                        signup_enabled INTEGER NOT NULL DEFAULT 1,
+                        signup_starts_at DATETIME,
+                        signup_deadline DATETIME,
+                        capacity INTEGER NOT NULL DEFAULT 0,
+                        allow_signup_during_live INTEGER NOT NULL DEFAULT 0,
+                        external_signup_url TEXT NOT NULL DEFAULT '',
+                        signup_button_label TEXT NOT NULL DEFAULT '',
+                        signup_success_message TEXT NOT NULL DEFAULT '',
+                        signup_closed_reason TEXT NOT NULL DEFAULT '',
                         created_by INTEGER,
                         updated_by INTEGER,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -133,6 +143,7 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
                         message TEXT NOT NULL DEFAULT '',
                         status TEXT NOT NULL DEFAULT 'new',
                         notes TEXT NOT NULL DEFAULT '',
+                        dedupe_key TEXT NOT NULL DEFAULT '',
                         owner_id INTEGER,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -296,6 +307,16 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate audit schema: %w", err)
 	}
 
+	if err := migrateEventSchema(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("migrate event schema: %w", err)
+	}
+
+	if err := migrateLeadSchema(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("migrate lead schema: %w", err)
+	}
+
 	if err := migrateKnowledgeAccessPassSchema(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate knowledge access pass schema: %w", err)
@@ -391,6 +412,81 @@ func migrateAuditLogSchema(db *sql.DB) error {
 		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func migrateEventSchema(db *sql.DB) error {
+	statements := []string{
+		`ALTER TABLE events ADD COLUMN signup_mode TEXT NOT NULL DEFAULT 'internal'`,
+		`ALTER TABLE events ADD COLUMN signup_enabled INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE events ADD COLUMN signup_starts_at DATETIME`,
+		`ALTER TABLE events ADD COLUMN signup_deadline DATETIME`,
+		`ALTER TABLE events ADD COLUMN capacity INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE events ADD COLUMN allow_signup_during_live INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE events ADD COLUMN external_signup_url TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE events ADD COLUMN signup_button_label TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE events ADD COLUMN signup_success_message TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE events ADD COLUMN signup_closed_reason TEXT NOT NULL DEFAULT ''`,
+	}
+
+	for _, statement := range statements {
+		if _, err := db.Exec(statement); err != nil {
+			if !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func migrateLeadSchema(db *sql.DB) error {
+	if _, err := db.Exec(`ALTER TABLE leads ADD COLUMN dedupe_key TEXT NOT NULL DEFAULT ''`); err != nil {
+		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+			return err
+		}
+	}
+
+	if _, err := db.Exec(`
+                UPDATE leads
+                SET dedupe_key = CASE
+                        WHEN source_type = 'event' AND source_id IS NOT NULL
+                                THEN lower(trim(contact)) || '#event#' || source_id
+                        ELSE ''
+                END
+                WHERE dedupe_key = ''
+        `); err != nil {
+		return err
+	}
+
+	// 历史库里可能已经存在重复报名，这里保留最新一条作为主记录，
+	// 旧记录让出 dedupe_key，避免唯一索引在迁移时直接失败。
+	if _, err := db.Exec(`
+                UPDATE leads AS current
+                SET dedupe_key = ''
+                WHERE current.dedupe_key <> ''
+                  AND current.source_type = 'event'
+                  AND current.source_id IS NOT NULL
+                  AND EXISTS (
+                        SELECT 1
+                        FROM leads AS newer
+                        WHERE newer.id > current.id
+                          AND newer.source_type = current.source_type
+                          AND newer.source_id = current.source_id
+                          AND lower(trim(newer.contact)) = lower(trim(current.contact))
+                  )
+        `); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(`
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_event_dedupe
+                ON leads(dedupe_key)
+                WHERE dedupe_key <> ''
+        `); err != nil {
+		return err
 	}
 
 	return nil

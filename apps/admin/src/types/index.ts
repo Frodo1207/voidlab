@@ -2,7 +2,17 @@ export type ContentStatus = "draft" | "published" | "archived";
 export type UserRole = "admin" | "editor" | "ops";
 export type ActorType = "human" | "agent";
 export type LeadSourceType = "contact" | "event" | "builder";
-export type LeadStatus = "new" | "contacted" | "following" | "converted" | "invalid";
+export type LeadStatus =
+  | "new"
+  | "applied"
+  | "approved"
+  | "waitlisted"
+  | "rejected"
+  | "checked_in"
+  | "contacted"
+  | "following"
+  | "converted"
+  | "invalid";
 export type SiteConfigKey =
   | "home_banner"
   | "home_featured"
@@ -53,6 +63,18 @@ export interface EventRecord {
   content: string;
   coverUrl: string;
   status: ContentStatus;
+  signupMode: "internal" | "external" | "closed";
+  signupStatus: string;
+  signupEnabled: boolean;
+  signupStartsAt: string;
+  signupDeadline: string;
+  capacity: number;
+  signupCount: number;
+  allowSignupDuringLive: boolean;
+  externalSignupUrl: string;
+  signupButtonLabel: string;
+  signupSuccessMessage: string;
+  signupClosedReason: string;
   updatedAt: string;
 }
 
@@ -102,6 +124,7 @@ export interface LeadRecord {
   message: string;
   status: LeadStatus;
   notes: string;
+  dedupeKey: string;
   ownerId?: number;
   createdAt: string;
   updatedAt: string;
@@ -308,6 +331,8 @@ export type AgentScope =
   | "articles:write"
   | "events:read"
   | "events:write"
+  | "leads:read"
+  | "leads:write"
   | "builders:read"
   | "builders:write"
   | "knowledge:read"

@@ -4,7 +4,7 @@ import SiteHeader from "../components/SiteHeader.vue";
 import { useKnowledgeBase } from "../composables/useKnowledgeBase";
 import { resolveUploadsUrl } from "../src/runtimeConfig";
 
-const { spaces, isSpaceUnlocked, getSpaceStats } = useKnowledgeBase();
+const { spaces, getSpaceAccessState, getSpaceStats } = useKnowledgeBase();
 
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -13,7 +13,10 @@ function scrollToTop() {
 function spaceCardCoverStyle(coverUrl: string) {
   const resolved = resolveUploadsUrl(coverUrl || "");
   if (!resolved) {
-    return undefined;
+    return {
+      backgroundImage:
+        "linear-gradient(135deg, #eef2f6 0%, #f8fafc 45%, #ffffff 100%)"
+    };
   }
 
   return {
@@ -69,11 +72,25 @@ onMounted(() => {
             <div class="mt-4 flex items-center gap-3 text-[13px] text-[#999999]">
               <div class="flex items-center gap-1.5">
                 <span class="inline-block h-4 w-4 text-center">📄</span>
-                <span>{{ getSpaceStats(space.slug).entryCount }} 篇内容</span>
+                <span>{{ space.entryCount }} 篇内容</span>
               </div>
               <span>·</span>
-              <span :class="isSpaceUnlocked(space.slug) ? 'text-[#0f7b6c]' : 'text-[#d97706]'">
-                {{ isSpaceUnlocked(space.slug) ? "已解锁" : "需令牌" }}
+              <span
+                :class="
+                  getSpaceAccessState(space.slug) === 'public'
+                    ? 'text-[#6d28d9]'
+                    : getSpaceAccessState(space.slug) === 'unlocked'
+                      ? 'text-[#0f7b6c]'
+                      : 'text-[#d97706]'
+                "
+              >
+                {{
+                  getSpaceAccessState(space.slug) === "public"
+                    ? "公开"
+                    : getSpaceAccessState(space.slug) === "unlocked"
+                      ? "已解锁"
+                      : "需令牌"
+                }}
               </span>
             </div>
           </div>

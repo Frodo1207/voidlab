@@ -22,6 +22,18 @@ type PublicEventRecord = {
   content: string;
   cover_url: string;
   status: string;
+  signup_mode: "internal" | "external" | "closed";
+  signup_status: string;
+  signup_enabled: boolean;
+  signup_starts_at: string;
+  signup_deadline: string;
+  capacity: number;
+  signup_count: number;
+  allow_signup_during_live: boolean;
+  external_signup_url: string;
+  signup_button_label: string;
+  signup_success_message: string;
+  signup_closed_reason: string;
   updated_at: string;
 };
 
@@ -38,6 +50,18 @@ export type EventItem = {
   summary: string;
   content: string;
   cover: string;
+  signupMode: "internal" | "external" | "closed";
+  signupStatus: string;
+  signupEnabled: boolean;
+  signupStartsAt: string;
+  signupDeadline: string;
+  capacity: number;
+  signupCount: number;
+  allowSignupDuringLive: boolean;
+  externalSignupUrl: string;
+  signupButtonLabel: string;
+  signupSuccessMessage: string;
+  signupClosedReason: string;
 };
 
 const fallbackCover = "/assets/event1.PNG";
@@ -126,7 +150,19 @@ function mapEvent(record: PublicEventRecord): EventItem {
     type: record.event_type || "活动",
     summary: record.summary || "",
     content: record.content || "",
-    cover: normalizeCoverUrl(record.cover_url)
+    cover: normalizeCoverUrl(record.cover_url),
+    signupMode: record.signup_mode,
+    signupStatus: record.signup_status,
+    signupEnabled: record.signup_enabled,
+    signupStartsAt: record.signup_starts_at,
+    signupDeadline: record.signup_deadline,
+    capacity: record.capacity,
+    signupCount: record.signup_count,
+    allowSignupDuringLive: record.allow_signup_during_live,
+    externalSignupUrl: record.external_signup_url,
+    signupButtonLabel: record.signup_button_label,
+    signupSuccessMessage: record.signup_success_message,
+    signupClosedReason: record.signup_closed_reason
   };
 }
 
@@ -241,4 +277,25 @@ export function eventActionLabel(status: EventStatus) {
   if (status === "done") return "查看回顾";
   if (status === "next") return "预约席位";
   return "立即报名";
+}
+
+export function eventSignupStatusLabel(signupStatus: string) {
+  switch (signupStatus) {
+    case "open":
+      return "报名开放";
+    case "not_started":
+      return "报名未开始";
+    case "closed":
+      return "报名关闭";
+    case "full":
+      return "名额已满";
+    case "live_locked":
+      return "进行中不可报名";
+    case "ended":
+      return "活动已结束";
+    case "external":
+      return "外部报名";
+    default:
+      return "暂不可报名";
+  }
 }

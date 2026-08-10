@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { useBuilderNetwork } from "../composables/useBuilderNetwork";
 import { useInsightsFeed } from "../composables/useInsightsFeed";
 import { useSiteConfigs } from "../composables/useSiteConfigs";
 import {
@@ -12,7 +11,6 @@ import {
 import SiteHeader from "../components/SiteHeader.vue";
 
 const { featuredEvents, loadEvents } = useEventArchive();
-const { featuredBuilders, loadBuilders } = useBuilderNetwork();
 const { featuredInsights, loadInsights } = useInsightsFeed();
 const { homeBanner, homeFeatured, footerConfig, featuredContentSlots, loadSiteConfigs } = useSiteConfigs();
 const router = useRouter();
@@ -23,7 +21,6 @@ const showCtas = ref(false);
 const showStats = ref(false);
 const titleDone = computed(() => typedTitle.value === homeBanner.value.titleText);
 const homepageEvents = computed(() => featuredEvents.value.slice(0, featuredContentSlots.value.eventsLimit));
-const homepageBuilders = computed(() => featuredBuilders.value.slice(0, featuredContentSlots.value.buildersLimit));
 const homepageInsights = computed(() => featuredInsights.value.slice(0, featuredContentSlots.value.insightsLimit));
 
 let typeTimer: number | null = null;
@@ -64,7 +61,6 @@ function routeHref(path: string) {
 onMounted(async () => {
   document.title = "VOID LAB | 探索 AI 的边界";
   void loadEvents();
-  void loadBuilders();
   void loadInsights();
   try {
     await loadSiteConfigs();
@@ -369,84 +365,6 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </div>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section id="builders" class="relative z-10 w-full border-t border-white/5 pointer-events-auto overflow-hidden py-16 bg-[#050505]">
-        <div class="absolute inset-0 bg-gradient-to-b from-[var(--color-turquoise)]/5 via-transparent to-transparent pointer-events-none"></div>
-        <div class="relative z-10 w-full px-6 md:px-12 lg:px-16 mx-auto max-w-[1920px]">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
-            <div>
-              <h2 class="text-3xl md:text-4xl font-bold pixel-zh-title leading-tight text-white tracking-wide">
-                {{ featuredContentSlots.buildersTitle }}<br />
-                <span class="text-lg md:text-xl text-[var(--color-turquoise)] pixel-text">> 可连接的人 / 可协作的网络</span>
-              </h2>
-              <p class="pixel-text text-sm text-white/45 mt-4 max-w-2xl leading-relaxed">
-                {{ homeFeatured.buildersDescription }}
-              </p>
-            </div>
-            <a :href="routeHref('/builders')" target="_blank" rel="noreferrer" class="pixel-text text-xs md:text-sm text-white/60 hover:text-[var(--color-turquoise)] transition-colors border-b border-transparent hover:border-[var(--color-turquoise)] pb-1">
-              {{ featuredContentSlots.buildersViewAllLabel }}
-            </a>
-          </div>
-
-          <!-- 纯 Builder 卡片网格布局（无右侧图形） -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <a
-              v-for="builder in homepageBuilders"
-              :key="builder.slug"
-              :href="routeHref(`/builders/${builder.slug}`)"
-              target="_blank"
-              rel="noreferrer"
-              class="group relative flex items-center p-5 bg-[#0a0a0a] rounded transition-all duration-300 hover:bg-[#111] overflow-hidden"
-            >
-              <!-- 底部背景图片（右侧显示，向左渐变变黑） -->
-              <div 
-                v-if="builder.cover"
-                class="absolute inset-0 pointer-events-none transition-transform duration-700 group-hover:scale-105"
-              >
-                <img :src="builder.cover" alt="" class="w-full h-full object-cover opacity-40 mix-blend-luminosity grayscale group-hover:grayscale-0 transition-all duration-500" />
-                <!-- 关键渐变遮罩：修改为全屏渐变，左侧大面积黑，向右缓慢过渡到透明 -->
-                <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a] to-transparent via-50%"></div>
-                
-                <!-- 悬浮时的底色遮罩，保证变亮时左侧依然能压住文字区底色 -->
-                <div class="absolute inset-0 bg-gradient-to-r from-[#111] via-[#111]/90 to-transparent via-50% opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </div>
-
-              <div class="relative z-10 flex items-center gap-5 w-full">
-                <div class="w-12 h-12 rounded-sm bg-white/5 text-white/80 flex items-center justify-center pixel-zh-title text-base group-hover:text-[var(--color-turquoise)] group-hover:shadow-[0_0_15px_rgba(66,255,209,0.2)] transition-all duration-300 shrink-0">
-                  {{ builder.name.slice(0, 2).toUpperCase() }}
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex justify-between items-center mb-1">
-                    <div class="flex items-center gap-3">
-                      <h3 class="text-white text-base font-bold pixel-zh-title group-hover:text-[var(--color-turquoise)] transition-colors truncate">{{ builder.name }}</h3>
-                      <span class="pixel-text text-[10px] text-white/40">{{ builder.city }}</span>
-                    </div>
-                    <span class="pixel-text text-[9px] text-[var(--color-turquoise)]/70 bg-[var(--color-turquoise)]/5 px-1.5 py-0.5 rounded-sm whitespace-nowrap">{{ builder.role }}</span>
-                  </div>
-                  <div class="text-white/50 text-sm line-clamp-1 mb-2">{{ builder.title }}</div>
-                  
-                  <!-- 标签 (Tag) 列表 -->
-                  <div class="flex flex-wrap gap-2">
-                    <span 
-                      v-for="skill in builder.expertise.slice(0, 3)" 
-                      :key="skill"
-                      class="pixel-text text-[9px] text-white/50 bg-white/5 px-1.5 py-0.5 rounded-sm"
-                    >
-                      #{{ skill }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </a>
-          </div>
-
-          <div class="mt-4">
-            <a :href="routeHref('/builders')" target="_blank" rel="noreferrer" class="group flex items-center justify-center gap-3 p-4 bg-[#0a0a0a]/30 border-t border-white/5 hover:bg-[#111] transition-all duration-300 cursor-pointer rounded">
-              <span class="pixel-text text-[10px] text-white/50 group-hover:text-[var(--color-turquoise)] transition-colors">> 进入完整网络</span>
             </a>
           </div>
         </div>

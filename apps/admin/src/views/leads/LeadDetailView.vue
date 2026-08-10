@@ -18,6 +18,11 @@ const nextLog = ref("");
 
 const statusOptions: Array<{ label: string; value: LeadStatus }> = [
   { label: "新线索", value: "new" },
+  { label: "已报名", value: "applied" },
+  { label: "已通过", value: "approved" },
+  { label: "候补中", value: "waitlisted" },
+  { label: "已拒绝", value: "rejected" },
+  { label: "已签到", value: "checked_in" },
   { label: "已联系", value: "contacted" },
   { label: "跟进中", value: "following" },
   { label: "已转化", value: "converted" },
@@ -26,6 +31,11 @@ const statusOptions: Array<{ label: string; value: LeadStatus }> = [
 
 const allowedLeadTransitions: Record<LeadStatus, LeadStatus[]> = {
   new: ["new", "contacted", "invalid"],
+  applied: ["applied", "approved", "waitlisted", "rejected", "invalid"],
+  approved: ["approved", "checked_in", "waitlisted", "rejected", "invalid"],
+  waitlisted: ["waitlisted", "approved", "rejected", "invalid"],
+  rejected: ["rejected", "approved", "invalid"],
+  checked_in: ["checked_in", "converted"],
   contacted: ["contacted", "following", "invalid"],
   following: ["following", "contacted", "converted", "invalid"],
   converted: ["converted"],
@@ -192,6 +202,10 @@ onMounted(() => {
             <div class="meta-item">
               <span>更新时间</span>
               <strong>{{ record.updatedAt }}</strong>
+            </div>
+            <div class="meta-item">
+              <span>去重键</span>
+              <strong>{{ record.dedupeKey || "-" }}</strong>
             </div>
           </div>
         </el-card>

@@ -47,10 +47,10 @@ export async function updateSiteConfig<T>(key: SiteConfigKey, value: T) {
 export const defaultHomeBannerConfig: HomeBannerConfig = {
   titleText: "探索 AI 的边界",
   subtitle: "我们构建 AI 资产，不做玩具。",
-  primaryCtaLabel: "连接社交网络",
-  primaryCtaPath: "/builders",
-  secondaryCtaLabel: "查看社区活动",
-  secondaryCtaPath: "/events",
+  primaryCtaLabel: "查看社区活动",
+  primaryCtaPath: "/events",
+  secondaryCtaLabel: "联系我们",
+  secondaryCtaPath: "/contact",
   statusLabel: "系统状态 // 社区指标"
 };
 
@@ -100,7 +100,6 @@ export const defaultFooterConfig: FooterConfig = {
   navLinks: [
     { label: "首页", path: "/" },
     { label: "活动", path: "/events" },
-    { label: "社交网络", path: "/builders" },
     { label: "资讯", path: "/insights" },
     { label: "联系我们", path: "/contact" }
   ],
@@ -110,7 +109,7 @@ export const defaultFooterConfig: FooterConfig = {
 export const defaultGlobalCtaConfig: GlobalCtaConfig = {
   eyebrow: "NEXT ACTION",
   title: "准备把想法变成活动、内容或合作项目？",
-  description: "如果你想和 VOIDLAB 一起办活动、发起合作、加入网络或咨询 AI 落地方案，可以直接从这里进入下一步。",
+  description: "如果你想和 VOIDLAB 一起办活动、发起合作或咨询 AI 落地方案，可以直接从这里进入下一步。",
   primaryLabel: "提交合作意向",
   primaryPath: "/contact",
   secondaryLabel: "查看活动",

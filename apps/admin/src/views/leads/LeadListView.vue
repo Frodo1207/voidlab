@@ -11,6 +11,11 @@ const loading = ref(false);
 
 const statusMeta: Record<LeadStatus, { label: string; type: "" | "warning" | "success" | "info" | "danger" }> = {
   new: { label: "新线索", type: "warning" },
+  applied: { label: "已报名", type: "warning" },
+  approved: { label: "已通过", type: "success" },
+  waitlisted: { label: "候补中", type: "info" },
+  rejected: { label: "已拒绝", type: "danger" },
+  checked_in: { label: "已签到", type: "success" },
   contacted: { label: "已联系", type: "info" },
   following: { label: "跟进中", type: "" },
   converted: { label: "已转化", type: "success" },

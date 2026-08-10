@@ -39,7 +39,6 @@ const navLinks = [
   { name: '首页', path: '/', external: false },
   { name: '资讯', path: '/insights', external: true },
   { name: '知识库', path: '/knowledge', external: true },
-  { name: '社交网络', path: '/builders', external: true },
   { name: '活动', path: '/events', external: true },
 ];
 </script>

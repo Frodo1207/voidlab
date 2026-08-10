@@ -19,6 +19,7 @@ interface ApiLeadRecord {
   message: string;
   status: LeadStatus;
   notes: string;
+  dedupe_key: string;
   owner_id?: number;
   created_at: string;
   updated_at: string;
@@ -36,8 +37,26 @@ export interface LeadPayload {
   owner_id?: number;
 }
 
-export async function listLeads(): Promise<LeadRecord[]> {
-  const records = await apiRequest<ApiLeadRecord[]>("/api/v1/leads");
+export interface LeadListQuery {
+  sourceType?: LeadSourceType;
+  sourceId?: number;
+  status?: LeadStatus;
+}
+
+export async function listLeads(query: LeadListQuery = {}): Promise<LeadRecord[]> {
+  const search = new URLSearchParams();
+  if (query.sourceType) {
+    search.set("source_type", query.sourceType);
+  }
+  if (typeof query.sourceId === "number") {
+    search.set("source_id", String(query.sourceId));
+  }
+  if (query.status) {
+    search.set("status", query.status);
+  }
+
+  const path = search.size > 0 ? `/api/v1/leads?${search.toString()}` : "/api/v1/leads";
+  const records = await apiRequest<ApiLeadRecord[]>(path);
   return records.map(mapLead);
 }
 
@@ -80,6 +99,7 @@ function mapLead(record: ApiLeadRecord): LeadRecord {
     message: record.message,
     status: record.status,
     notes: record.notes,
+    dedupeKey: record.dedupe_key,
     ownerId: record.owner_id,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
