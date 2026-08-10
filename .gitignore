@@ -1,5 +1,7 @@
 .DS_Store
-.trae/
+.trae/*
+!.trae/skills/
+!.trae/skills/**
 
 node_modules/
 dist/
