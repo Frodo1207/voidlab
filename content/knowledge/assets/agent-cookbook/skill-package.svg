@@ -1,0 +1,38 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="112" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">Skill：一段被整理好的做事方法</text>
+  <text x="84" y="150" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">不是只记一句提示词，而是把目标、工具、步骤和输出方式一起收进来。</text>
+
+  <rect x="420" y="208" width="360" height="424" rx="28" fill="#FAF7F0" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="420" y="208" width="12" height="424" rx="6" fill="#C4F000"/>
+  <text x="464" y="268" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="32" font-weight="700">一个 Skill 里通常有</text>
+
+  <rect x="464" y="302" width="272" height="56" rx="16" fill="#FFFDF8" stroke="#E1D8C8"/>
+  <text x="490" y="338" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">目标：这段能力解决什么问题</text>
+
+  <rect x="464" y="376" width="272" height="56" rx="16" fill="#FFFDF8" stroke="#E1D8C8"/>
+  <text x="490" y="412" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">提示：大脑该怎么理解任务</text>
+
+  <rect x="464" y="450" width="272" height="56" rx="16" fill="#FFFDF8" stroke="#E1D8C8"/>
+  <text x="490" y="486" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">工具：需要调用哪些能力</text>
+
+  <rect x="464" y="524" width="272" height="56" rx="16" fill="#FFFDF8" stroke="#E1D8C8"/>
+  <text x="490" y="560" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">步骤：先做什么，后做什么</text>
+
+  <rect x="464" y="598" width="272" height="56" rx="16" fill="#FFFDF8" stroke="#E1D8C8"/>
+  <text x="490" y="634" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">输出：最后交付成什么样</text>
+
+  <rect x="84" y="270" width="240" height="116" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="124" y="324" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">一次性 Prompt</text>
+  <text x="124" y="360" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">说完这一句</text>
+
+  <rect x="876" y="270" width="240" height="116" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="946" y="324" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Skill</text>
+  <text x="918" y="360" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">下次还可以继续用</text>
+
+  <path d="M324 328H420" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M780 328H876" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M420 328L408 320V336L420 328Z" fill="#CBC2B4"/>
+  <path d="M876 328L864 320V336L876 328Z" fill="#CBC2B4"/>
+</svg>

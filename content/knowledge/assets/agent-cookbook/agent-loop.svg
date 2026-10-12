@@ -1,0 +1,48 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="112" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">Agent Loop：感知 → 思考 → 行动 → 观察</text>
+  <text x="84" y="150" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">智能体不是一次性把任务做完，而是不断循环：拿到新信息，决定下一步，做动作，再看结果。</text>
+
+  <!-- Nodes -->
+  <rect x="140" y="260" width="220" height="120" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="140" y="260" width="10" height="120" rx="5" fill="#C4F000"/>
+  <text x="172" y="312" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">感知</text>
+  <text x="172" y="348" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">拿到输入</text>
+
+  <rect x="420" y="260" width="220" height="120" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="420" y="260" width="10" height="120" rx="5" fill="#A8DB1B"/>
+  <text x="452" y="312" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">思考</text>
+  <text x="452" y="348" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">计划 + 选工具</text>
+
+  <rect x="700" y="260" width="220" height="120" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="700" y="260" width="10" height="120" rx="5" fill="#85C600"/>
+  <text x="732" y="312" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">行动</text>
+  <text x="732" y="348" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">调用工具</text>
+
+  <rect x="420" y="430" width="220" height="120" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="420" y="430" width="10" height="120" rx="5" fill="#63AE00"/>
+  <text x="452" y="482" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">观察</text>
+  <text x="452" y="518" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">拿到结果</text>
+
+  <!-- Arrows -->
+  <path d="M360 320H420" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M640 320H700" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M810 380V430" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M700 490H640" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M420 490H360" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M250 380V430" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M250 430H420" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M250 260V220H810V260" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 10"/>
+
+  <path d="M420 320L408 312V328L420 320Z" fill="#CBC2B4"/>
+  <path d="M700 320L688 312V328L700 320Z" fill="#CBC2B4"/>
+  <path d="M810 430L802 418H818L810 430Z" fill="#CBC2B4"/>
+  <path d="M360 490L372 482V498L360 490Z" fill="#CBC2B4"/>
+  <path d="M250 430L262 422V438L250 430Z" fill="#CBC2B4"/>
+
+  <!-- Bottom note -->
+  <rect x="84" y="594" width="1032" height="92" rx="18" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="116" y="636" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">为什么要循环</text>
+  <text x="260" y="636" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">因为外部世界会变，工具会失败，信息也经常不完整，只能边做边看边修正。</text>
+</svg>

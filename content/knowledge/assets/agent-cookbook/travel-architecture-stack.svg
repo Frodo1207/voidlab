@@ -1,0 +1,30 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="108" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">旅行助手四层架构</text>
+  <text x="84" y="146" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">前端、后端、Agent、外部服务各管一层，项目就不会一上来糊成一团。</text>
+
+  <rect x="160" y="196" width="880" height="98" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="160" y="196" width="12" height="98" rx="6" fill="#C4F000"/>
+  <text x="206" y="250" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">前端层</text>
+  <text x="362" y="250" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">表单输入 / 结果页 / 地图展示 / 编辑与导出</text>
+
+  <rect x="160" y="322" width="880" height="98" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="160" y="322" width="12" height="98" rx="6" fill="#9FD412"/>
+  <text x="206" y="376" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">后端层</text>
+  <text x="362" y="376" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">API / 参数校验 / 服务编排 / 数据格式收口</text>
+
+  <rect x="160" y="448" width="880" height="98" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="160" y="448" width="12" height="98" rx="6" fill="#7BC400"/>
+  <text x="206" y="502" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">Agent 层</text>
+  <text x="362" y="502" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">任务拆解 / 工具调用 / 多 Agent 协作 / 结果汇总</text>
+
+  <rect x="160" y="574" width="880" height="98" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="160" y="574" width="12" height="98" rx="6" fill="#59AB00"/>
+  <text x="206" y="628" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">外部服务层</text>
+  <text x="392" y="628" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">LLM / 地图 / 路线 / 图片 / 天气 / 酒店等外部能力</text>
+
+  <path d="M1090 245V620" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 10"/>
+  <text x="1104" y="430" fill="#7A7368" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">数据向下取</text>
+  <text x="1104" y="456" fill="#7A7368" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">结果向上回</text>
+</svg>

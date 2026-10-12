@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useBuilderNetwork } from "../composables/useBuilderNetwork";
 import { submitBuilderInquiry } from "../composables/useLeadIntake";
 import SiteHeader from "../components/SiteHeader.vue";
+import { normalizeFlexibleContact, validateFlexibleContact } from "../src/contactValidation";
 
 const route = useRoute();
 const router = useRouter();
@@ -17,10 +18,18 @@ const error = ref("");
 const submitting = ref(false);
 const submitSuccess = ref("");
 const submitError = ref("");
+const contactTouched = ref(false);
 const form = reactive({
   name: "",
   contact: "",
   message: ""
+});
+const contactFieldError = computed(() => {
+  if (!contactTouched.value) {
+    return "";
+  }
+
+  return validateFlexibleContact(form.contact);
 });
 
 async function syncBuilderDetail() {
@@ -57,11 +66,20 @@ async function handleSubmit() {
     return;
   }
 
+  contactTouched.value = true;
+  const contactError = validateFlexibleContact(form.contact);
+  if (contactError) {
+    submitError.value = contactError;
+    submitSuccess.value = "";
+    return;
+  }
+
   submitting.value = true;
   submitError.value = "";
   submitSuccess.value = "";
 
   try {
+    form.contact = normalizeFlexibleContact(form.contact);
     await submitBuilderInquiry(builder.value.slug, builder.value.name, {
       name: form.name,
       contact: form.contact,
@@ -72,6 +90,7 @@ async function handleSubmit() {
     form.name = "";
     form.contact = "";
     form.message = "";
+    contactTouched.value = false;
   } catch (error) {
     submitError.value = error instanceof Error ? error.message : "提交失败，请稍后重试";
   } finally {
@@ -218,9 +237,19 @@ async function handleSubmit() {
                   v-model="form.contact"
                   type="text"
                   required
-                  class="w-full rounded-lg border border-white/10 bg-[#0b0c11] px-4 py-3 text-white outline-none focus:border-purple-400"
+                  :class="[
+                    'w-full rounded-lg bg-[#0b0c11] px-4 py-3 text-white outline-none',
+                    contactFieldError ? 'border border-[#7f1d1d] focus:border-[#f87171]' : 'border border-white/10 focus:border-purple-400'
+                  ]"
                   placeholder="微信 / 邮箱 / 手机号"
+                  @blur="
+                    contactTouched = true;
+                    form.contact = normalizeFlexibleContact(form.contact);
+                  "
                 />
+                <p v-if="contactFieldError" class="text-sm text-[#fca5a5]">
+                  {{ contactFieldError }}
+                </p>
                 <textarea
                   v-model="form.message"
                   rows="4"

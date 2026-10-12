@@ -1,0 +1,33 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="680" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="108" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">MCP 在旅行助手里的位置</text>
+  <text x="84" y="146" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">它不是工具本身，而是把地图、路线、图片这些能力统一接进系统的一层。</text>
+
+  <rect x="120" y="300" width="230" height="150" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="120" y="300" width="10" height="150" rx="5" fill="#C4F000"/>
+  <text x="176" y="360" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">Agent</text>
+  <text x="176" y="396" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">景点 / 规划 / 汇总</text>
+
+  <rect x="440" y="260" width="320" height="230" rx="26" fill="#F4F0E7" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="440" y="260" width="12" height="230" rx="6" fill="#8DD000"/>
+  <text x="496" y="328" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="32" font-weight="700">MCP 工具层</text>
+  <text x="496" y="372" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">统一参数</text>
+  <text x="496" y="406" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">统一返回</text>
+  <text x="496" y="440" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">统一复用入口</text>
+
+  <rect x="850" y="180" width="180" height="88" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="906" y="234" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">地图</text>
+  <rect x="850" y="296" width="180" height="88" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="906" y="350" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">路线</text>
+  <rect x="850" y="412" width="180" height="88" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="906" y="466" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">图片</text>
+  <rect x="850" y="528" width="180" height="88" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="906" y="582" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">天气</text>
+
+  <path d="M350 375H440" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M760 224H850" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M760 340H850" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M760 456H850" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M760 572H850" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+</svg>

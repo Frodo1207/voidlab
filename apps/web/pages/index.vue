@@ -12,7 +12,7 @@ import SiteHeader from "../components/SiteHeader.vue";
 
 const { featuredEvents, loadEvents } = useEventArchive();
 const { featuredInsights, loadInsights } = useInsightsFeed();
-const { homeBanner, homeFeatured, footerConfig, featuredContentSlots, loadSiteConfigs } = useSiteConfigs();
+const { homeBanner, homeFeatured, footerConfig, featuredContentSlots, contactChannels, loadSiteConfigs } = useSiteConfigs();
 const router = useRouter();
 
 const typedTitle = ref("");
@@ -22,6 +22,18 @@ const showStats = ref(false);
 const titleDone = computed(() => typedTitle.value === homeBanner.value.titleText);
 const homepageEvents = computed(() => featuredEvents.value.slice(0, featuredContentSlots.value.eventsLimit));
 const homepageInsights = computed(() => featuredInsights.value.slice(0, featuredContentSlots.value.insightsLimit));
+const contactIcons = [
+  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
+  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
+  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m2 4 10 8 10-8"></path></svg>`,
+  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`
+];
+const homepageContacts = computed(() =>
+  contactChannels.value.map((item, index) => ({
+    ...item,
+    icon: contactIcons[index % contactIcons.length]
+  }))
+);
 
 let typeTimer: number | null = null;
 let startTypeTimer: number | null = null;
@@ -492,66 +504,31 @@ onBeforeUnmount(() => {
 
           <!-- Bottom Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 border border-white/10 rounded-sm overflow-hidden bg-[#0a0a0a]">
-            <!-- Item 1: 小红书 -->
-            <div class="p-8 border-b lg:border-b-0 md:border-r border-white/10 flex flex-col hover:bg-white/[0.02] transition-colors group">
-              <div class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mb-6 text-white/80 group-hover:border-white transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-              </div>
-              <h3 class="text-lg font-bold text-white pixel-zh-title mb-3">官方小红书</h3>
+            <div
+              v-for="(item, index) in homepageContacts"
+              :key="`${item.title}-${index}`"
+              class="p-8 flex flex-col hover:bg-white/[0.02] transition-colors group border-b border-white/10 md:[&:nth-child(2n+1)]:border-r lg:border-b-0 lg:border-r last:border-r-0"
+            >
+              <div
+                class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mb-6 text-white/80 group-hover:border-white transition-colors"
+                v-html="item.icon"
+              ></div>
+              <h3 class="text-lg font-bold text-white pixel-zh-title mb-3">{{ item.title }}</h3>
               <p class="text-sm text-white/50 leading-relaxed mb-6 flex-1">
-                关注 VOID LAB 的活动回顾、现场照片、社区动态和新活动发布。
+                {{ item.desc }}
               </p>
-              <div class="text-xs text-white/80 mb-6 font-mono">小红书号 VOIDLAB_AI</div>
-              <button class="w-fit px-6 py-2 rounded-full border border-white/20 text-sm text-white hover:bg-white hover:text-black transition-colors pixel-zh-title">
-                关注小红书
-              </button>
-            </div>
-
-            <!-- Item 2: 社区群 -->
-            <div class="p-8 border-b lg:border-b-0 lg:border-r border-white/10 flex flex-col hover:bg-white/[0.02] transition-colors group">
-              <div class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mb-6 text-white/80 group-hover:border-white transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <div class="text-xs text-white/80 mb-6 font-mono" :class="{ uppercase: item.link.startsWith('mailto:') }">
+                {{ item.account }}
               </div>
-              <h3 class="text-lg font-bold text-white pixel-zh-title mb-3">加入社区群</h3>
-              <p class="text-sm text-white/50 leading-relaxed mb-6 flex-1">
-                加入 VOID LAB 微信群，获取活动通知、结识伙伴和线下聚会信息。
-              </p>
-              <div class="text-xs text-white/80 mb-6 font-mono">企业微信入群二维码</div>
-              <button class="w-fit px-6 py-2 rounded-full border border-white/20 text-sm text-white hover:bg-white hover:text-black transition-colors pixel-zh-title">
-                查看二维码
-              </button>
+              <a
+                :href="item.link || '#'"
+                class="w-fit px-6 py-2 rounded-full border border-white/20 text-sm text-white hover:bg-white hover:text-black transition-colors pixel-zh-title"
+                :target="item.link.startsWith('http') ? '_blank' : undefined"
+                :rel="item.link.startsWith('http') ? 'noreferrer' : undefined"
+              >
+                {{ item.buttonText }}
+              </a>
             </div>
-
-            <!-- Item 3: 官方邮箱 -->
-            <div class="p-8 border-b md:border-b-0 md:border-r border-white/10 flex flex-col hover:bg-white/[0.02] transition-colors group">
-              <div class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mb-6 text-white/80 group-hover:border-white transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m2 4 10 8 10-8"></path></svg>
-              </div>
-              <h3 class="text-lg font-bold text-white pixel-zh-title mb-3">官方邮箱</h3>
-              <p class="text-sm text-white/50 leading-relaxed mb-6 flex-1">
-                合作、赞助、学校/社区组织、媒体和正式事项联系。
-              </p>
-              <div class="text-xs text-white/80 mb-6 font-mono uppercase">join@voidlab.ai</div>
-              <button class="w-fit px-6 py-2 rounded-full border border-white/20 text-sm text-white hover:bg-white hover:text-black transition-colors pixel-zh-title">
-                发邮件
-              </button>
-            </div>
-
-            <!-- Item 4: 官方小助手 -->
-            <div class="p-8 flex flex-col hover:bg-white/[0.02] transition-colors group">
-              <div class="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center mb-6 text-white/80 group-hover:border-white transition-colors">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-              </div>
-              <h3 class="text-lg font-bold text-white pixel-zh-title mb-3">官方小助手</h3>
-              <p class="text-sm text-white/50 leading-relaxed mb-6 flex-1">
-                咨询、报名、入群、活动问题和成员对接支持。
-              </p>
-              <div class="text-xs text-white/80 mb-6 font-mono">企业微信客服链接</div>
-              <button class="w-fit px-6 py-2 rounded-full border border-white/20 text-sm text-white hover:bg-white hover:text-black transition-colors pixel-zh-title">
-                添加小助手
-              </button>
-            </div>
-
           </div>
         </div>
       </section>

@@ -1,0 +1,40 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="680" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="108" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">多 Agent 协作主线</text>
+  <text x="84" y="146" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">不是并行乱飞，而是按“拿约束 → 补信息 → 做规划 → 收结果”的顺序往前走。</text>
+
+  <rect x="100" y="270" width="220" height="140" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="100" y="270" width="10" height="140" rx="5" fill="#C4F000"/>
+  <text x="140" y="326" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">用户需求</text>
+  <text x="140" y="362" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">目的地 / 日期 / 预算</text>
+
+  <rect x="360" y="250" width="220" height="180" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="360" y="250" width="10" height="180" rx="5" fill="#9FD412"/>
+  <text x="404" y="308" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">景点 Agent</text>
+  <text x="404" y="344" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">找候选地点</text>
+  <text x="404" y="376" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">补基础信息</text>
+
+  <rect x="620" y="250" width="220" height="180" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="620" y="250" width="10" height="180" rx="5" fill="#72C000"/>
+  <text x="654" y="308" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">酒店 / 餐饮</text>
+  <text x="654" y="344" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">补住宿建议</text>
+  <text x="654" y="376" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">补吃饭和预算</text>
+
+  <rect x="880" y="250" width="220" height="180" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="880" y="250" width="10" height="180" rx="5" fill="#59AB00"/>
+  <text x="924" y="308" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">规划 / 汇总</text>
+  <text x="924" y="344" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">排每天行程</text>
+  <text x="924" y="376" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">输出最终结果</text>
+
+  <path d="M320 340H360" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M580 340H620" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M840 340H880" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M360 340L348 332V348L360 340Z" fill="#CBC2B4"/>
+  <path d="M620 340L608 332V348L620 340Z" fill="#CBC2B4"/>
+  <path d="M880 340L868 332V348L880 340Z" fill="#CBC2B4"/>
+
+  <rect x="160" y="520" width="880" height="110" rx="22" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="210" y="572" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">重点不是凑够几个 Agent，而是每个角色只管一类事</text>
+  <text x="210" y="610" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">这样提示词更短、问题更好排、某一块效果不好时也更容易单独替换。</text>
+</svg>

@@ -1,0 +1,53 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#F6F3EC"/>
+  <rect x="44" y="36" width="1112" height="688" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="106" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">大语言模型推理时在发生什么</text>
+  <text x="84" y="144" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">“推理”在这里更接近一次连续生成过程：读入上下文，计算下一步，接上结果，再重复。</text>
+
+  <rect x="84" y="196" width="216" height="154" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="84" y="196" width="10" height="154" rx="5" fill="#C4F000"/>
+  <text x="116" y="246" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">1. 输入上下文</text>
+  <text x="116" y="286" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">用户问题</text>
+  <text x="116" y="316" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">系统提示词</text>
+  <text x="116" y="346" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">前面对话内容</text>
+
+  <rect x="344" y="196" width="238" height="154" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="344" y="196" width="10" height="154" rx="5" fill="#A8DB1B"/>
+  <text x="376" y="246" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">2. 拆成 token</text>
+  <text x="376" y="286" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">不是直接看整段话</text>
+  <text x="376" y="316" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">而是转成一串更细的单位</text>
+  <text x="376" y="346" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">方便后续计算</text>
+
+  <rect x="626" y="196" width="238" height="154" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="626" y="196" width="10" height="154" rx="5" fill="#85C600"/>
+  <text x="658" y="246" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">3. 计算概率</text>
+  <text x="658" y="286" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">结合上下文关系</text>
+  <text x="658" y="316" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">判断哪些候选更像下一步</text>
+  <text x="658" y="346" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">形成一个概率分布</text>
+
+  <rect x="908" y="196" width="208" height="154" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="908" y="196" width="10" height="154" rx="5" fill="#63AE00"/>
+  <text x="940" y="246" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">4. 选一个</text>
+  <text x="940" y="286" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">按策略选出</text>
+  <text x="940" y="316" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">当前最合适的 token</text>
+
+  <path d="M300 272H344" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M582 272H626" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M864 272H908" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M334 272L322 264V280L334 272Z" fill="#CBC2B4"/>
+  <path d="M616 272L604 264V280L616 272Z" fill="#CBC2B4"/>
+  <path d="M898 272L886 264V280L898 272Z" fill="#CBC2B4"/>
+
+  <rect x="84" y="408" width="1032" height="114" rx="22" fill="#FAF7F0" stroke="#E5DDCF"/>
+  <text x="116" y="454" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">一个小例子</text>
+  <text x="116" y="492" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">当前上下文：`杭州西湖适合晚上去，因为那里`</text>
+  <text x="116" y="524" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">模型会给很多候选打分，比如 `灯光`、`白天`、`火车站`、`下雨`，然后挑一个更像当前语境的续写。</text>
+
+  <rect x="84" y="566" width="490" height="118" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="116" y="612" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">为什么它有时像“理解了”</text>
+  <text x="116" y="648" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">因为它见过大量语言模式，能把上下文、语气、结构和常见知识一起带进下一步预测。</text>
+
+  <rect x="626" y="566" width="490" height="118" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="658" y="612" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">为什么它也会一本正经地错</text>
+  <text x="658" y="648" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">因为它选的是“像真的”下一步，不等于它真的查过外部事实，也不等于它总能验证自己。</text>
+</svg>

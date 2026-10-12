@@ -16,6 +16,13 @@ export type LeadFormInput = {
   message: string;
 };
 
+export type CheckinFormInput = {
+  name: string;
+  mobile: string;
+  company: string;
+  position: string;
+};
+
 async function requestLeadIntake<T>(path: string, payload: Record<string, unknown>) {
   const response = await fetch(resolvePublicApiPath(path), {
     method: "POST",
@@ -51,4 +58,8 @@ export async function submitBuilderInquiry(
     builder_name: builderName,
     ...input
   });
+}
+
+export async function submitEventCheckin(eventID: number, input: CheckinFormInput) {
+  return requestLeadIntake<LeadSubmitResponse>(`/api/v1/events/${eventID}/checkin`, input);
 }

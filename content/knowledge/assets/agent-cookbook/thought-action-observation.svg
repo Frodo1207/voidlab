@@ -1,0 +1,40 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="112" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">Thought / Action / Observation</text>
+  <text x="84" y="150" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">把“想法”翻译成“动作”，再把“结果”喂回去，才能跑成循环。</text>
+
+  <!-- Cards -->
+  <rect x="84" y="220" width="320" height="180" rx="24" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="84" y="220" width="10" height="180" rx="5" fill="#C4F000"/>
+  <text x="116" y="274" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Thought</text>
+  <text x="116" y="314" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">当前怎么判断</text>
+  <text x="116" y="344" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">下一步要做什么</text>
+
+  <rect x="440" y="220" width="320" height="180" rx="24" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="440" y="220" width="10" height="180" rx="5" fill="#A8DB1B"/>
+  <text x="472" y="274" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Action</text>
+  <text x="472" y="314" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">结构化调用</text>
+  <text x="472" y="344" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">工具名 + 参数</text>
+
+  <rect x="796" y="220" width="320" height="180" rx="24" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="796" y="220" width="10" height="180" rx="5" fill="#85C600"/>
+  <text x="828" y="274" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Observation</text>
+  <text x="828" y="314" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">工具返回结果</text>
+  <text x="828" y="344" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">整理成可读输入</text>
+
+  <!-- Arrows -->
+  <path d="M404 310H440" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M760 310H796" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M956 400C956 504 244 504 244 400" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8 10"/>
+  <path d="M440 310L428 302V318L440 310Z" fill="#CBC2B4"/>
+  <path d="M796 310L784 302V318L796 310Z" fill="#CBC2B4"/>
+  <path d="M244 400L252 388H236L244 400Z" fill="#CBC2B4"/>
+
+  <!-- Example block -->
+  <rect x="84" y="462" width="1032" height="200" rx="22" fill="#FAF7F0" stroke="#E1D8C8"/>
+  <text x="116" y="512" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">一个小例子</text>
+  <text x="116" y="552" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">Thought：需要先确认出发地和预算，否则行程会瞎猜。</text>
+  <text x="116" y="584" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">Action：ask_user("从哪里出发？预算多少？")</text>
+  <text x="116" y="616" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">Observation：用户回答：从上海出发，预算 2000 元，两个人。</text>
+</svg>

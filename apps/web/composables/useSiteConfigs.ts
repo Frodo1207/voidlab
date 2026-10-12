@@ -244,7 +244,16 @@ export function useSiteConfigs() {
 
   const contactChannels = computed<ContactChannelConfig[]>(() => {
     const channels = siteConfigState.value.contact_channels;
-    return Array.isArray(channels) && channels.length > 0 ? channels : defaultContactChannels;
+    if (!Array.isArray(channels) || channels.length === 0) {
+      return defaultContactChannels;
+    }
+
+    const normalizedChannels = channels
+      .slice(0, defaultContactChannels.length)
+      .map((channel, index) => normalizeContactChannel(channel, defaultContactChannels[index]))
+      .filter((channel): channel is ContactChannelConfig => channel !== null);
+
+    return normalizedChannels.length > 0 ? normalizedChannels : defaultContactChannels;
   });
 
   const footerConfig = computed<FooterConfig>(() => {
@@ -295,4 +304,37 @@ function normalizePositiveNumber(value: unknown, fallback: number) {
   }
 
   return Math.min(Math.floor(value), 12);
+}
+
+function normalizeContactChannel(
+  value: unknown,
+  fallback: ContactChannelConfig
+): ContactChannelConfig | null {
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const candidate = value as Partial<ContactChannelConfig>;
+  const normalized = {
+    title: normalizeNonEmptyText(candidate.title, fallback.title),
+    desc: normalizeNonEmptyText(candidate.desc, fallback.desc),
+    account: normalizeNonEmptyText(candidate.account, fallback.account),
+    buttonText: normalizeNonEmptyText(candidate.buttonText, fallback.buttonText),
+    link: normalizeNonEmptyText(candidate.link, fallback.link)
+  };
+
+  if (!normalized.title && !normalized.desc && !normalized.account && !normalized.buttonText) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function normalizeNonEmptyText(value: unknown, fallback: string) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || fallback;
 }

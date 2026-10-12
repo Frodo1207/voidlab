@@ -10,45 +10,52 @@ status: "published"
 
 ## Space 结构
 
-- `nav/`：导读、阅读路线、目录索引、资料来源
-- `intro/`：从概念到第一个可验收 Agent 的主干章节
-- `practice/`：3 个主案例，覆盖单 Agent、真实世界案例与多 Agent 系统
+- `nav/`：课程导读
+- `intro/`：从大语言模型、Agent、MCP、Skill 到最小 Agent 开发前的主干章节
+- `practice/`：主案例，覆盖单 Agent、真实世界案例与多 Agent 系统
 
-## 导读与导航（`nav/`）
+## 课程导读（`nav/`）
 
-- `00-space-intro.md`：这套课到底解决什么问题
-- `01-reading-path.md`：怎么读这套课
-- `02-directory-index.md`：一页导航
-- `03-sources-and-citations.md`：资料来源与引用说明
-- `99-changelog.md`：更新日志
+- `00-space-intro.md`：课程背景、前置要求与最终目标
 
 ## 入门（`intro/`）
 
-- `00-what-is-agent.md`：什么是 Agent，不是什么
-- `01-agent-mental-model.md`：Agent 的最小骨架
-- `02-using-agent-hosts.md`：如何使用 Codex / Trae 这类 Agent 宿主
-- `03-prompt-as-contract.md`：Prompt 不是咒语，是契约
-- `04-tools-and-first-external-action.md`：工具调用与第一个外部动作
-- `05-first-acceptable-agent.md`：第一个可验收 Agent
+- `00-what-is-agent.md`：什么是大语言模型
+- `01-agent-mental-model.md`：什么是 Agent
+- `02-using-agent-hosts.md`：什么是 MCP
+- `03-prompt-as-contract.md`：什么是 Skill
 
-## 实战案例（`practice/`）
+## 实战（`practice/`）
 
-- `20-dialogue-agent.md`：案例一，对话 Agent
-- `21-travel-assistant.md`：案例二，智能旅行助手
-- `22-texas-holdem-multi-agent.md`：案例三，德州扑克多 Agent 系统
+### 案例一：5 分钟实现第一个智能体
+
+- `11-first-agent-dependencies-and-prompt.md`：依赖与系统提示词
+- `12-first-agent-tools.md`：准备工具
+- `13-first-agent-model-and-loop.md`：接入模型与跑主循环
+- `14-first-agent-result-and-analysis.md`：运行结果与分析
+
+### 案例二：旅游路线规划 Agent
+
+- `20-travel-planning-agent.md`：项目概述与架构设计
+- `21-travel-planning-prerequisites.md`：快速体验：先把项目跑起来
+- `22-travel-planning-frontend-page.md`：数据模型设计
+- `23-travel-planning-backend-and-db.md`：多 Agent 协作设计
+- `24-travel-planning-mcp-integration.md`：MCP 工具接入
+- `25-travel-planning-frontend-details.md`：前端页面设计
+- `26-travel-planning-features.md`：功能实现与交互细节
 
 ## 怎么开始最稳
 
-如果你是第一次系统学 Agent 开发，建议先按 `intro/` 主干一路读到 `05-first-acceptable-agent.md`。这样你会先把“什么是 Agent、最小骨架是什么、怎么在宿主里工作、Prompt 怎么写成契约、工具怎么接、什么叫可验收”这几层搭起来，再进入案例。
+如果你是第一次系统学 Agent 开发，建议先看 `nav/00-space-intro.md`，再按 `intro/` 主干一路读到 `03-prompt-as-contract.md`。这样你会先把“大语言模型是什么、Agent 是什么、MCP 和 Skill 在系统里各自扮演什么角色”这几层搭起来，再进入案例。
 
-如果你已经对主干概念不陌生，也可以直接从 `practice/20-dialogue-agent.md` 开始，先看最小单 Agent 是怎么成立的，再继续读旅行助手和多 Agent 系统。
+如果已经对主干概念不陌生，也可以直接从 `practice/11-first-agent-dependencies-and-prompt.md` 开始，先跑通一个最小 Agent，再进入 `案例二：旅游路线规划 Agent`，把完整项目的背景、前置条件和技术搭建路径看清楚。
 
 ## 当前状态
 
-这套 Space 当前已经完成主干与 3 个主案例的正文补写。现在它不是“待填骨架”，而是一套可以直接阅读的零基础课程：前 6 篇负责建立共同骨架，后 3 篇负责把单 Agent、真实世界任务和多 Agent 系统一层层推开。
+这套 Space 现在先把最前面的结构收成了一个短导读：只讲背景、前置要求和最终目标。后面会继续按这个更紧的结构补正文。
 
 ## 推荐入口
 
-- 想先跑通一次最小闭环：从 `01-agent-mental-model.md` 开始
-- 想先看怎么把任务写成系统：从 `03-prompt-as-contract.md` 开始
-- 想先看真实案例：从 `20-dialogue-agent.md` 开始
+- 想先建立概念入口：从 `00-what-is-agent.md` 开始
+- 想先看第一个最小示例：从 `11-first-agent-dependencies-and-prompt.md` 开始
+- 想先看完整项目案例：从 `20-travel-planning-agent.md` 开始

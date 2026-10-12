@@ -40,6 +40,13 @@ type BuilderInquiryRequest struct {
 	Message     string `json:"message"`
 }
 
+type EventCheckinRequest struct {
+	Name     string `json:"name"`
+	Mobile   string `json:"mobile"`
+	Company  string `json:"company"`
+	Position string `json:"position"`
+}
+
 var nonDigitPattern = regexp.MustCompile(`\D`)
 var labeledPhonePattern = regexp.MustCompile(`手机\s*[:：]\s*([^\n/]+)`)
 
@@ -173,6 +180,54 @@ func (h *IntakeHandler) BuilderInquiry(ctx *gin.Context) {
 	OK(ctx, gin.H{"submitted": true})
 }
 
+func (h *IntakeHandler) EventCheckin(ctx *gin.Context) {
+	eventID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		Fail(ctx, stdhttp.StatusBadRequest, 4403, "invalid event id")
+		return
+	}
+
+	event, getErr := h.eventService.GetByID(eventID)
+	if getErr != nil {
+		if errors.Is(getErr, sql.ErrNoRows) {
+			Fail(ctx, stdhttp.StatusNotFound, 4441, "event not found")
+			return
+		}
+		Fail(ctx, stdhttp.StatusInternalServerError, 5401, "failed to get event")
+		return
+	}
+
+	var req EventCheckinRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		Fail(ctx, stdhttp.StatusBadRequest, 4401, "invalid request body")
+		return
+	}
+
+	normalizedMobile, ok := extractNormalizedEventPhone(req.Mobile)
+	if !ok {
+		Fail(ctx, stdhttp.StatusBadRequest, 4408, "请输入有效的 11 位手机号")
+		return
+	}
+
+	if _, err := h.leadService.Create(service.LeadInput{
+		SourceType: "event",
+		SourceID:   &eventID,
+		Name:       strings.TrimSpace(req.Name),
+		Contact:    normalizedMobile,
+		Status:     "checked_in",
+		Message:    formatEventCheckinLeadMessage(event.Title, req.Company, req.Position),
+	}); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "unique") || strings.Contains(strings.ToLower(err.Error()), "dedupe") {
+			Fail(ctx, stdhttp.StatusBadRequest, 4409, "这个手机号已经为该活动签到过了")
+			return
+		}
+		Fail(ctx, stdhttp.StatusBadRequest, 4402, err.Error())
+		return
+	}
+
+	OK(ctx, gin.H{"submitted": true})
+}
+
 func (h *IntakeHandler) resolveBuilderInquiry(req BuilderInquiryRequest) (*int64, string, error) {
 	builderSlug := strings.TrimSpace(req.BuilderSlug)
 	builderName := strings.TrimSpace(req.BuilderName)
@@ -229,6 +284,21 @@ func formatBuilderLeadMessage(builderName string, builderSlug string, message st
 	}
 	if len(parts) == 0 {
 		return "用户提交了 Builder 合作意向。"
+	}
+	return strings.Join(parts, "\n")
+}
+
+func formatEventCheckinLeadMessage(eventTitle string, company string, position string) string {
+	parts := []string{}
+	if strings.TrimSpace(eventTitle) != "" {
+		parts = append(parts, fmt.Sprintf("活动：%s", strings.TrimSpace(eventTitle)))
+	}
+	parts = append(parts, "来源：活动签到")
+	if strings.TrimSpace(company) != "" {
+		parts = append(parts, fmt.Sprintf("公司：%s", strings.TrimSpace(company)))
+	}
+	if strings.TrimSpace(position) != "" {
+		parts = append(parts, fmt.Sprintf("岗位：%s", strings.TrimSpace(position)))
 	}
 	return strings.Join(parts, "\n")
 }

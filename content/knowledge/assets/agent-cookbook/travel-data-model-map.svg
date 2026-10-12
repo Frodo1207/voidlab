@@ -1,0 +1,48 @@
+<svg width="1200" height="780" viewBox="0 0 1200 780" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="780" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="700" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="108" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">旅行助手数据模型关系</text>
+  <text x="84" y="146" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">先把基础对象定稳，再往上组合成每天行程和总计划。</text>
+
+  <rect x="498" y="190" width="204" height="84" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="498" y="190" width="10" height="84" rx="5" fill="#C4F000"/>
+  <text x="542" y="242" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Location</text>
+
+  <rect x="120" y="330" width="210" height="96" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="178" y="388" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Attraction</text>
+
+  <rect x="375" y="330" width="210" height="96" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="452" y="388" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Hotel</text>
+
+  <rect x="630" y="330" width="210" height="96" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="723" y="388" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Meal</text>
+
+  <rect x="885" y="330" width="210" height="96" rx="20" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="954" y="388" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">Budget</text>
+
+  <rect x="370" y="518" width="220" height="104" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="370" y="518" width="10" height="104" rx="5" fill="#9FD412"/>
+  <text x="432" y="576" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">DayPlan</text>
+
+  <rect x="640" y="518" width="220" height="104" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="640" y="518" width="10" height="104" rx="5" fill="#72C000"/>
+  <text x="688" y="576" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">TripPlan</text>
+
+  <path d="M600 274V330" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 330H225" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 330H480" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 330H735" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 330H990" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M225 330V318" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M480 330V318" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M735 330V318" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M990 330V318" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+
+  <path d="M480 426V518" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M735 426V518" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M990 426V570H860" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M590 570H640" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+
+  <rect x="120" y="658" width="960" height="54" rx="16" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="156" y="692" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">思路是：基础对象先定清楚，再组合出一天和整趟旅行，不要一开始就直接写一个巨大的总对象。</text>
+</svg>

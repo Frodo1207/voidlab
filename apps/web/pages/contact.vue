@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import SiteHeader from "../components/SiteHeader.vue";
 import { submitContactLead } from "../composables/useLeadIntake";
 import { useSiteConfigs } from "../composables/useSiteConfigs";
+import { normalizeFlexibleContact, validateFlexibleContact } from "../src/contactValidation";
 
 const { contactChannels, loadSiteConfigs } = useSiteConfigs();
 
@@ -18,6 +19,7 @@ onMounted(async () => {
 const submitting = ref(false);
 const submitSuccess = ref("");
 const submitError = ref("");
+const contactTouched = ref(false);
 const form = reactive({
   name: "",
   contact: "",
@@ -38,13 +40,29 @@ const contacts = computed(() =>
     icon: contactIcons[index % contactIcons.length]
   }))
 );
+const contactFieldError = computed(() => {
+  if (!contactTouched.value) {
+    return "";
+  }
+
+  return validateFlexibleContact(form.contact);
+});
 
 async function handleSubmit() {
+  contactTouched.value = true;
+  const contactError = validateFlexibleContact(form.contact);
+  if (contactError) {
+    submitError.value = contactError;
+    submitSuccess.value = "";
+    return;
+  }
+
   submitting.value = true;
   submitError.value = "";
   submitSuccess.value = "";
 
   try {
+    form.contact = normalizeFlexibleContact(form.contact);
     await submitContactLead({
       name: form.name,
       contact: form.contact,
@@ -55,6 +73,7 @@ async function handleSubmit() {
     form.name = "";
     form.contact = "";
     form.message = "";
+    contactTouched.value = false;
   } catch (error) {
     submitError.value = error instanceof Error ? error.message : "提交失败，请稍后重试";
   } finally {
@@ -145,9 +164,19 @@ async function handleSubmit() {
                 v-model="form.contact"
                 type="text"
                 required
-                class="w-full rounded-2xl border border-white/10 bg-[#0b0c11] px-4 py-3 text-white outline-none transition-colors focus:border-[#42ffd1]/60"
+                :class="[
+                  'w-full rounded-2xl bg-[#0b0c11] px-4 py-3 text-white outline-none transition-colors',
+                  contactFieldError ? 'border border-[#7f1d1d] focus:border-[#f87171]' : 'border border-white/10 focus:border-[#42ffd1]/60'
+                ]"
                 placeholder="微信 / 邮箱 / 手机号"
+                @blur="
+                  contactTouched = true;
+                  form.contact = normalizeFlexibleContact(form.contact);
+                "
               />
+              <p v-if="contactFieldError" class="mt-2 text-sm text-[#fca5a5]">
+                {{ contactFieldError }}
+              </p>
             </div>
 
             <div>

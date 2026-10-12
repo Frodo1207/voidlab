@@ -1,0 +1,30 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="680" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="108" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">从 Agent demo 到产品原型</text>
+  <text x="84" y="146" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">生成只是起点，预算、加载、编辑、导出这几块补上，产品感才真正出来。</text>
+
+  <circle cx="600" cy="390" r="104" fill="#C4F000" fill-opacity="0.18" stroke="#93BE00" stroke-width="3"/>
+  <text x="516" y="386" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">旅行计划</text>
+  <text x="540" y="422" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">核心结果</text>
+
+  <rect x="180" y="188" width="210" height="96" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="248" y="246" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">预算</text>
+
+  <rect x="820" y="188" width="210" height="96" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="882" y="246" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">加载</text>
+
+  <rect x="180" y="518" width="210" height="96" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="248" y="576" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">编辑</text>
+
+  <rect x="820" y="518" width="210" height="96" rx="22" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <text x="882" y="576" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">导出</text>
+
+  <path d="M390 284L520 338" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M820 284L680 338" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M390 518L520 442" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M820 518L680 442" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+
+  <rect x="164" y="654" width="872" height="42" rx="14" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="204" y="681" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="19">四块一接上，用户看到的就不再只是“生成了一段话”，而是一个能用、能改、能带走的结果。</text>
+</svg>

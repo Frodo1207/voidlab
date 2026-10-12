@@ -1,0 +1,48 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="112" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">PEAS：把任务环境讲清楚</text>
+  <text x="84" y="150" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">做 Agent 之前，先把“怎么评估、处在什么环境、能做什么动作、能看到什么输入”说清楚。</text>
+
+  <!-- 2x2 grid -->
+  <rect x="84" y="200" width="512" height="212" rx="22" fill="#FAF7F0" stroke="#E1D8C8"/>
+  <rect x="604" y="200" width="512" height="212" rx="22" fill="#FAF7F0" stroke="#E1D8C8"/>
+  <rect x="84" y="428" width="512" height="212" rx="22" fill="#FAF7F0" stroke="#E1D8C8"/>
+  <rect x="604" y="428" width="512" height="212" rx="22" fill="#FAF7F0" stroke="#E1D8C8"/>
+
+  <!-- P -->
+  <rect x="84" y="200" width="10" height="212" rx="5" fill="#C4F000"/>
+  <text x="120" y="252" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">P</text>
+  <text x="150" y="252" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">Performance</text>
+  <text x="120" y="292" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">做得好不好怎么量化</text>
+  <text x="120" y="330" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">例：行程可执行、符合预算/时间、</text>
+  <text x="120" y="356" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">覆盖偏好、风险说明清楚</text>
+
+  <!-- E -->
+  <rect x="604" y="200" width="10" height="212" rx="5" fill="#A8DB1B"/>
+  <text x="640" y="252" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">E</text>
+  <text x="670" y="252" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">Environment</text>
+  <text x="640" y="292" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">外部世界是什么样</text>
+  <text x="640" y="330" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">例：票价/余票会波动、信息不全、</text>
+  <text x="640" y="356" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">用户需求会修改</text>
+
+  <!-- A -->
+  <rect x="84" y="428" width="10" height="212" rx="5" fill="#85C600"/>
+  <text x="120" y="480" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">A</text>
+  <text x="150" y="480" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">Actuators</text>
+  <text x="120" y="520" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">能动手做哪些动作</text>
+  <text x="120" y="558" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">例：调搜索/地图 API、读写文件、</text>
+  <text x="120" y="584" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">写入数据库、生成页面/文档</text>
+
+  <!-- S -->
+  <rect x="604" y="428" width="10" height="212" rx="5" fill="#63AE00"/>
+  <text x="640" y="480" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">S</text>
+  <text x="670" y="480" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">Sensors</text>
+  <text x="640" y="520" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">能看到哪些输入</text>
+  <text x="640" y="558" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">例：用户输入、API 返回、</text>
+  <text x="640" y="584" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">数据库记录、上一轮结果</text>
+
+  <!-- Footer -->
+  <rect x="84" y="656" width="1032" height="44" rx="14" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="116" y="686" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">PEAS 把边界收住：没说清 P/E/A/S，Agent 很容易只剩“看起来像”。</text>
+</svg>

@@ -1,0 +1,31 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="760" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="680" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="108" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">前端页面骨架</text>
+  <text x="84" y="146" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">最少先盯住两个页面：首页表单页和结果页。</text>
+
+  <rect x="104" y="204" width="360" height="430" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="104" y="204" width="10" height="430" rx="5" fill="#C4F000"/>
+  <text x="148" y="258" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">首页表单页</text>
+  <rect x="148" y="300" width="270" height="48" rx="12" fill="#F4F0E7"/>
+  <rect x="148" y="366" width="270" height="48" rx="12" fill="#F4F0E7"/>
+  <rect x="148" y="432" width="270" height="48" rx="12" fill="#F4F0E7"/>
+  <rect x="148" y="498" width="270" height="48" rx="12" fill="#F4F0E7"/>
+  <rect x="148" y="566" width="180" height="40" rx="12" fill="#C4F000"/>
+  <text x="188" y="592" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20" font-weight="700">开始规划</text>
+
+  <rect x="546" y="204" width="550" height="430" rx="24" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="546" y="204" width="10" height="430" rx="5" fill="#8DD000"/>
+  <text x="590" y="258" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">结果页</text>
+  <rect x="590" y="294" width="462" height="54" rx="14" fill="#F4F0E7"/>
+  <rect x="590" y="372" width="210" height="150" rx="16" fill="#F4F0E7"/>
+  <rect x="826" y="372" width="226" height="150" rx="16" fill="#F4F0E7"/>
+  <rect x="590" y="548" width="462" height="48" rx="14" fill="#F4F0E7"/>
+  <text x="634" y="328" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">总览信息</text>
+  <text x="658" y="458" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">预算 / 地图</text>
+  <text x="904" y="458" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">按天行程</text>
+  <text x="742" y="578" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">编辑 / 导出动作</text>
+
+  <path d="M464 420H546" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round" stroke-dasharray="10 10"/>
+  <text x="446" y="396" fill="#7A7368" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="18">提交后进入</text>
+</svg>

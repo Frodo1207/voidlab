@@ -1,0 +1,47 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="110" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">大语言模型像一个超级强大的输入法</text>
+  <text x="84" y="148" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">它不会先把整段答案一次性想完，而是根据前文，持续预测“下一个最可能出现的词或 token”。</text>
+
+  <rect x="84" y="198" width="1032" height="112" rx="20" fill="#FAF7F0" stroke="#E7E0D4"/>
+  <text x="114" y="244" fill="#8A8377" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">用户已经输入</text>
+  <text x="114" y="282" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">我周末想去杭州玩，帮我规划</text>
+  <rect x="736" y="228" width="330" height="52" rx="14" fill="#EAF5D0"/>
+  <text x="760" y="262" fill="#2C2C2C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22" font-weight="700">模型下一步先猜：`一个`</text>
+
+  <rect x="84" y="356" width="230" height="132" rx="20" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="84" y="356" width="10" height="132" rx="5" fill="#C4F000"/>
+  <text x="112" y="406" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">第 1 步</text>
+  <text x="112" y="442" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">看到前文</text>
+  <text x="112" y="472" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">“我周末想去杭州玩…”</text>
+
+  <rect x="352" y="356" width="230" height="132" rx="20" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="352" y="356" width="10" height="132" rx="5" fill="#9AD000"/>
+  <text x="380" y="406" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">第 2 步</text>
+  <text x="380" y="442" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">算一组概率</text>
+  <text x="380" y="472" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">哪个词最像下一步</text>
+
+  <rect x="620" y="356" width="230" height="132" rx="20" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="620" y="356" width="10" height="132" rx="5" fill="#78B700"/>
+  <text x="648" y="406" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">第 3 步</text>
+  <text x="648" y="442" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">选出一个词</text>
+  <text x="648" y="472" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">比如“一个”</text>
+
+  <rect x="888" y="356" width="228" height="132" rx="20" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <rect x="888" y="356" width="10" height="132" rx="5" fill="#56A100"/>
+  <text x="916" y="406" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="26" font-weight="700">第 4 步</text>
+  <text x="916" y="442" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">把它接到后面</text>
+  <text x="916" y="472" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">继续预测下一步</text>
+
+  <path d="M314 422H352" stroke="#CFC6B7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M582 422H620" stroke="#CFC6B7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M850 422H888" stroke="#CFC6B7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M342 422L330 414V430L342 422Z" fill="#CFC6B7"/>
+  <path d="M610 422L598 414V430L610 422Z" fill="#CFC6B7"/>
+  <path d="M878 422L866 414V430L878 422Z" fill="#CFC6B7"/>
+
+  <rect x="84" y="544" width="1032" height="88" rx="18" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="116" y="584" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="24" font-weight="700">所以它像输入法，但比输入法强很多</text>
+  <text x="116" y="616" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">普通输入法更多是固定规则和短上下文联想；大语言模型见过海量文本，能结合更长的上下文去“续写”出解释、总结、代码和对话。</text>
+</svg>

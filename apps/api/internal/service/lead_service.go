@@ -176,7 +176,7 @@ func validateLeadInput(input LeadInput) (repository.LeadCreateParams, error) {
 
 func isValidLeadSourceType(value string) bool {
 	switch value {
-	case "contact", "event", "builder":
+	case "contact", "event", "builder", "checkin":
 		return true
 	default:
 		return false

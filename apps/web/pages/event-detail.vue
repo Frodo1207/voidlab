@@ -9,6 +9,7 @@ import {
 } from "../composables/useEventArchive";
 import { submitEventRsvp } from "../composables/useLeadIntake";
 import SiteHeader from "../components/SiteHeader.vue";
+import { normalizeMainlandPhone } from "../src/contactValidation";
 import { renderMarkdown } from "../src/markdown";
 
 const route = useRoute();
@@ -32,21 +33,73 @@ const form = reactive({
   message: ""
 });
 let successNoticeTimer: number | null = null;
-
-function normalizeMainlandPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  const normalized = digits.length === 13 && digits.startsWith("86") ? digits.slice(2) : digits;
-  if (/^1[3-9]\d{9}$/.test(normalized)) {
-    return normalized;
-  }
-  return "";
-}
+let signupModalLockedScrollY = 0;
+let signupModalOriginalBodyOverflow = "";
+let signupModalOriginalBodyPosition = "";
+let signupModalOriginalBodyTop = "";
+let signupModalOriginalBodyWidth = "";
+let signupModalViewportVarInstalled = false;
+const phoneTouched = ref(false);
 
 function clearSuccessNoticeTimer() {
   if (successNoticeTimer !== null) {
     window.clearTimeout(successNoticeTimer);
     successNoticeTimer = null;
   }
+}
+
+function refreshSignupViewportHeightVar() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  document.documentElement.style.setProperty("--signup-vvh", `${viewportHeight * 0.01}px`);
+}
+
+function ensureSignupViewportHeightVarInstalled() {
+  if (signupModalViewportVarInstalled || typeof window === "undefined") {
+    return;
+  }
+
+  signupModalViewportVarInstalled = true;
+
+  refreshSignupViewportHeightVar();
+  window.addEventListener("resize", refreshSignupViewportHeightVar, { passive: true });
+  window.addEventListener("orientationchange", refreshSignupViewportHeightVar, { passive: true });
+  window.visualViewport?.addEventListener("resize", refreshSignupViewportHeightVar, { passive: true });
+  window.visualViewport?.addEventListener("scroll", refreshSignupViewportHeightVar, { passive: true });
+}
+
+function lockSignupModalBodyScroll() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  signupModalLockedScrollY = window.scrollY;
+  signupModalOriginalBodyOverflow = document.body.style.overflow;
+  signupModalOriginalBodyPosition = document.body.style.position;
+  signupModalOriginalBodyTop = document.body.style.top;
+  signupModalOriginalBodyWidth = document.body.style.width;
+
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${signupModalLockedScrollY}px`;
+  document.body.style.width = "100%";
+}
+
+function unlockSignupModalBodyScroll() {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return;
+  }
+
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = signupModalOriginalBodyOverflow;
+  document.body.style.position = signupModalOriginalBodyPosition;
+  document.body.style.top = signupModalOriginalBodyTop;
+  document.body.style.width = signupModalOriginalBodyWidth;
+  window.scrollTo(0, signupModalLockedScrollY);
 }
 
 async function syncEventDetail() {
@@ -90,6 +143,7 @@ async function handleSubmit() {
 
   submitError.value = "";
   submitSuccess.value = "";
+  phoneTouched.value = true;
 
   const normalizedPhone = normalizeMainlandPhone(form.phone);
   if (!normalizedPhone) {
@@ -125,6 +179,7 @@ async function handleSubmit() {
     form.position = "";
     form.industry = "";
     form.message = "";
+    phoneTouched.value = false;
     closeSignupModal();
     showSuccessNotice.value = true;
     clearSuccessNoticeTimer();
@@ -172,6 +227,13 @@ const signupHint = computed(() => {
 const renderedContent = computed(() =>
   event.value?.content ? renderMarkdown(event.value.content) : ""
 );
+const phoneFieldError = computed(() => {
+  if (!phoneTouched.value || !form.phone.trim()) {
+    return "";
+  }
+
+  return normalizeMainlandPhone(form.phone) ? "" : "请输入有效的 11 位手机号。";
+});
 
 const isModalOpen = ref(false);
 
@@ -186,6 +248,7 @@ function openSignupModal() {
 function closeSignupModal() {
   isModalOpen.value = false;
   submitError.value = "";
+  phoneTouched.value = false;
 }
 
 function closeSuccessNotice() {
@@ -194,8 +257,23 @@ function closeSuccessNotice() {
   submitSuccess.value = "";
 }
 
+watch(isModalOpen, (open) => {
+  if (open) {
+    ensureSignupViewportHeightVarInstalled();
+    refreshSignupViewportHeightVar();
+    lockSignupModalBodyScroll();
+    window.setTimeout(() => {
+      refreshSignupViewportHeightVar();
+    }, 0);
+    return;
+  }
+
+  unlockSignupModalBodyScroll();
+});
+
 onBeforeUnmount(() => {
   clearSuccessNoticeTimer();
+  unlockSignupModalBodyScroll();
 });
 </script>
 
@@ -342,10 +420,17 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Signup Modal -->
-    <div v-if="isModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div class="bg-[#f6f5f1] w-full max-w-md rounded-2xl shadow-xl overflow-hidden border border-[#e3e2e0]">
+    <div
+      v-if="isModalOpen"
+      class="fixed inset-0 z-[100] overflow-y-auto bg-black/40 p-3 backdrop-blur-sm sm:flex sm:items-center sm:justify-center sm:p-4"
+      @click.self="closeSignupModal"
+    >
+      <div
+        class="mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[#e3e2e0] bg-[#f6f5f1] shadow-xl"
+        style="max-height: calc(var(--signup-vvh, 1vh) * 100 - 1.5rem);"
+      >
         <!-- Modal Header -->
-        <div class="flex justify-between items-center px-6 py-4 border-b border-[#e3e2e0]">
+        <div class="flex shrink-0 items-center justify-between border-b border-[#e3e2e0] px-5 py-4 sm:px-6">
           <h3 class="text-lg font-bold text-[#111111] flex items-center gap-2">
             <span class="text-[#c4f000]">●</span> {{ signupPanelTitle }}
           </h3>
@@ -355,7 +440,7 @@ onBeforeUnmount(() => {
         </div>
         
         <!-- Modal Body -->
-        <div class="p-6">
+        <div class="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
           <p class="text-[14px] text-[#787774] mb-6">{{ signupHint }}</p>
 
           <form v-if="canUseInternalSignup" class="grid gap-4" @submit.prevent="handleSubmit">
@@ -386,12 +471,24 @@ onBeforeUnmount(() => {
                   v-model="form.phone"
                   type="tel"
                   required
+                  autocomplete="tel-national"
                   inputmode="numeric"
                   maxlength="13"
-                  class="w-full rounded-xl border border-[#d7dde5] bg-white px-4 py-3 text-[#333333] outline-none focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000] transition-shadow"
+                  :class="[
+                    'w-full rounded-xl bg-white px-4 py-3 text-[#333333] outline-none transition-shadow',
+                    phoneFieldError
+                      ? 'border border-[#f3d3d6] focus:border-[#d92d20] focus:ring-1 focus:ring-[#d92d20]'
+                      : 'border border-[#d7dde5] focus:border-[#c4f000] focus:ring-1 focus:ring-[#c4f000]'
+                  ]"
                   placeholder="11 位手机号"
-                  @blur="form.phone = normalizeMainlandPhone(form.phone) || form.phone"
+                  @blur="
+                    phoneTouched = true;
+                    form.phone = normalizeMainlandPhone(form.phone) || form.phone.trim();
+                  "
                 />
+                <p v-if="phoneFieldError" class="mt-2 text-[12px] text-[#b42318]">
+                  {{ phoneFieldError }}
+                </p>
               </div>
               <div>
                 <label class="block text-[13px] font-bold text-[#333333] mb-1">职位</label>
@@ -426,7 +523,7 @@ onBeforeUnmount(() => {
             <div v-if="submitError" class="rounded-xl border border-[#f3d3d6] bg-[#fff7f7] px-4 py-3 text-[14px] text-[#b42318]">
               {{ submitError }}
             </div>
-            <div class="mt-2 flex justify-end gap-3">
+            <div class="sticky bottom-0 mt-2 flex justify-end gap-3 border-t border-[#e3e2e0] bg-[#f6f5f1] pt-4 [padding-bottom:calc(env(safe-area-inset-bottom)+0.25rem)]">
               <button
                 type="button"
                 @click="closeSignupModal"

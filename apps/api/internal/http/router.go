@@ -116,6 +116,7 @@ func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
 
 		api.POST("/contact/submit", intakeHandler.ContactSubmit)
 		api.POST("/events/:id/rsvp", intakeHandler.EventRSVP)
+		api.POST("/events/:id/checkin", intakeHandler.EventCheckin)
 		api.POST("/builders/inquiry", intakeHandler.BuilderInquiry)
 
 		protected := api.Group("/")

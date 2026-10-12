@@ -1,0 +1,44 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" fill="#F6F3EC"/>
+  <rect x="48" y="40" width="1104" height="640" rx="28" fill="#FFFDF8" stroke="#E7E0D4" stroke-width="2"/>
+  <text x="84" y="112" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="36" font-weight="700">MCP：给大脑接工具的统一方式</text>
+  <text x="84" y="150" fill="#6B665C" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">不是每接一个工具都重新发明一套接法，而是先约定一套共同语言。</text>
+
+  <rect x="450" y="230" width="300" height="150" rx="28" fill="#FFFDF8" stroke="#D8CFBF" stroke-width="2"/>
+  <rect x="450" y="230" width="12" height="150" rx="6" fill="#C4F000"/>
+  <text x="490" y="290" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700">LLM / Agent</text>
+  <text x="490" y="332" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="22">大脑在这里做判断</text>
+
+  <rect x="440" y="446" width="320" height="96" rx="22" fill="#FAF7F0" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="500" y="502" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">MCP</text>
+  <text x="560" y="502" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">统一接法</text>
+
+  <rect x="116" y="430" width="220" height="140" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="164" y="488" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">文件系统</text>
+  <text x="152" y="526" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">读写、搜索、改文件</text>
+
+  <rect x="352" y="430" width="220" height="140" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="426" y="488" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">数据库</text>
+  <text x="394" y="526" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">查数据、写数据</text>
+
+  <rect x="628" y="430" width="220" height="140" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="692" y="488" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">浏览器</text>
+  <text x="678" y="526" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">打开、点击、输入</text>
+
+  <rect x="864" y="430" width="220" height="140" rx="22" fill="#FFFDF8" stroke="#DDD4C6" stroke-width="2"/>
+  <text x="904" y="488" fill="#171717" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="28" font-weight="700">外部 API</text>
+  <text x="904" y="526" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">地图、天气、票价</text>
+
+  <path d="M600 380V446" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 446H226" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 446H462" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 446H738" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M600 446H974" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M226 430V404" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M462 430V404" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M738 430V404" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M974 430V404" stroke="#CBC2B4" stroke-width="4" stroke-linecap="round"/>
+
+  <rect x="84" y="604" width="1032" height="60" rx="18" fill="#F4F0E7" stroke="#E1D8C8"/>
+  <text x="116" y="642" fill="#5F5A51" font-family="Arial, PingFang SC, Microsoft YaHei, sans-serif" font-size="20">有了统一接法，大脑不需要为每个工具都重新学一遍“怎么说话”。</text>
+</svg>

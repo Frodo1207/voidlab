@@ -7,6 +7,7 @@ import EventsPage from "../pages/events.vue";
 import InsightDetailPage from "../pages/insight-detail.vue";
 import InsightsPage from "../pages/insights.vue";
 import ContactPage from "../pages/contact.vue";
+import CheckinPage from "../pages/checkin.vue";
 import KnowledgePage from "../pages/knowledge.vue";
 import KnowledgeSpacePage from "../pages/knowledge-space.vue";
 import KnowledgeEntryPage from "../pages/knowledge-entry.vue";
@@ -45,6 +46,10 @@ const router = createRouter({
     {
       path: "/contact",
       component: ContactPage
+    },
+    {
+      path: "/checkin/:slug",
+      component: CheckinPage
     },
     {
       path: "/knowledge",
