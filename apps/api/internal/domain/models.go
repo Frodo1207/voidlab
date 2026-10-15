@@ -116,6 +116,32 @@ type MediaAsset struct {
 	CreatedAt     string `json:"created_at"`
 }
 
+type MediaGallery struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Slug        string `json:"slug"`
+	Description string `json:"description"`
+	IsDefault   bool   `json:"is_default"`
+	ItemCount   int64  `json:"item_count"`
+	CoverURL    string `json:"cover_url"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+type MediaGalleryItem struct {
+	ID            int64  `json:"id"`
+	GalleryID     int64  `json:"gallery_id"`
+	MediaAssetID  int64  `json:"media_asset_id"`
+	FileName      string `json:"file_name"`
+	ObjectURL     string `json:"object_url"`
+	ContentType   string `json:"content_type"`
+	FileSize      int64  `json:"-"`
+	FileSizeLabel string `json:"file_size"`
+	AltText       string `json:"alt_text"`
+	SortOrder     int    `json:"sort_order"`
+	IsActive      bool   `json:"is_active"`
+	CreatedAt     string `json:"created_at"`
+}
+
 type Lead struct {
 	ID         int64     `json:"id"`
 	SourceType string    `json:"source_type"`

@@ -440,3 +440,369 @@
 - 备注：
   - 本次避免继续使用“容器内直接替换二进制”的高风险路径
   - 服务器上曾存在旧的 `arm64/linux` API 镜像，本次已切换为匹配主机的 `amd64/linux` 新镜像
+
+- 时间：2026-10-12 15:54:02 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：部署每日资讯“最多 5 篇文章”后端改动到线上 API，并重启 `nginx`
+- 命令：
+  ```bash
+  COPYFILE_DISABLE=1 tar --no-mac-metadata -czf dist-packages/api-build-context-slim.tgz \
+    apps/api/Dockerfile \
+    apps/api/go.mod apps/api/go.sum \
+    apps/api/cmd apps/api/internal
+
+  scp dist-packages/api-build-context-slim.tgz \
+    root@142.248.136.161:/opt/voidlab/packages/api-build-context-slim.tgz
+
+  ssh root@142.248.136.161 '
+    set -e
+    rm -rf /opt/voidlab/build/api-src
+    mkdir -p /opt/voidlab/build/api-src
+    tar -xzf /opt/voidlab/packages/api-build-context-slim.tgz -C /opt/voidlab/build/api-src
+    cd /opt/voidlab/build/api-src
+    docker build -t voidlab-api:latest -f apps/api/Dockerfile .
+    docker image inspect voidlab-api:latest --format "{{.Id}} {{.Created}} {{.Architecture}}/{{.Os}}"
+    docker compose --env-file /opt/voidlab/deploy/voidlab.deploy.env \
+      -f /opt/voidlab/deploy/docker-compose.server.yml \
+      up -d --force-recreate --no-deps api
+    systemctl restart nginx
+  '
+  ```
+- 结果：
+  - 新 API 镜像已在服务器本机构建完成：`sha256:815b31a79fac91790cf70646fce1063cb6380e148a2fb26e1c79c9f6ffc3285e`
+  - 最新镜像架构已确认：`amd64/linux`
+  - `voidlab-api` 已通过 `docker compose ... up -d --force-recreate --no-deps api` 标准替换
+  - 公网验证通过：
+    - `GET https://voidlab.club/healthz` -> `200`
+    - `GET https://voidlab.club/api/v1/public/knowledge/spaces` -> `200`
+    - `HEAD https://admin.voidlab.club` -> `200`
+
+### [S4-06] 部署 daily-news reset 接口到线上 API
+
+- 时间：2026-10-12 17:15:11 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：将 `daily-news reset` 后端接口打包上传，并在服务器重建 `voidlab-api` 镜像后替换线上 API 容器
+- 命令：
+  ```bash
+  COPYFILE_DISABLE=1 tar --no-mac-metadata -czf dist-packages/api-build-context-slim.tgz \
+    apps/api/Dockerfile \
+    apps/api/go.mod apps/api/go.sum \
+    apps/api/cmd apps/api/internal
+
+  scp dist-packages/api-build-context-slim.tgz \
+    root@142.248.136.161:/opt/voidlab/packages/api-build-context-slim.tgz
+
+  ssh root@142.248.136.161 '
+    set -e
+    rm -rf /opt/voidlab/build/api-src
+    mkdir -p /opt/voidlab/build/api-src
+    tar -xzf /opt/voidlab/packages/api-build-context-slim.tgz -C /opt/voidlab/build/api-src
+    cd /opt/voidlab/build/api-src
+    docker build -t voidlab-api:latest -f apps/api/Dockerfile .
+    docker image inspect voidlab-api:latest --format "{{.Id}} {{.Created}} {{.Architecture}}/{{.Os}}"
+    docker compose --env-file /opt/voidlab/deploy/voidlab.deploy.env \
+      -f /opt/voidlab/deploy/docker-compose.server.yml \
+      up -d --force-recreate --no-deps api
+    chmod -R 777 /opt/voidlab/data/sqlite /opt/voidlab/data/uploads
+    curl -sS http://127.0.0.1:8080/healthz
+  '
+  ```
+- 结果：
+  - 新 API 镜像已在服务器本机构建完成：`sha256:9c5eaf0ad390b85944ef118a0070782352e36f53dfb882118969dce968c15286`
+  - 最新镜像架构已确认：`amd64/linux`
+  - `voidlab-api` 已成功重建并替换
+  - 服务器侧健康检查通过：`GET http://127.0.0.1:8080/healthz` -> `200`
+- 是否回滚：否
+- 备注：本次发布只更新 API，未动官网与后台静态资源
+
+### [OPS-01] 通过正式接口重置并重跑 2026-10-12 每日资讯
+
+- 时间：2026-10-12 17:15:11 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：使用后台登录 token 调用正式 daily-news 接口，先重置当天任务，再采集、补齐至 5 条、审核并发布
+- 命令：
+  ```bash
+  TOKEN=$(curl -sS -X POST https://voidlab.club/api/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"admin","password":"admin"}' \
+    | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+  EXTRA=$(curl -sS 'https://aihot.virxact.com/api/v1/items?mode=all&window=24h&limit=10' \
+    | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const j=JSON.parse(s);const seen=new Set(["svvvhr5j2nnywgdw29pso7o49","hvxwaxeyj6i82xv44ef4ce6fz","u9f1ozdbs5nobwugj3yss3z0e","z54sznsd0r2teb6gqyvwu4nc2"]);const item=(j.items||[]).find(x=>x && !seen.has(x.id) && x.links && x.links.aihot && x.links.original && x.title);process.stdout.write(JSON.stringify({items:item?[item]:[]}));});')
+
+  curl -sS -X POST https://voidlab.club/api/v1/daily-news/2026-10-12/reset \
+    -H "Authorization: Bearer $TOKEN"
+
+  curl -sS -X POST https://voidlab.club/api/v1/daily-news/collect \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d '{"date":"2026-10-12"}'
+
+  curl -sS -X POST https://voidlab.club/api/v1/daily-news/2026-10-12/items \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json' \
+    -d "$EXTRA"
+
+  curl -sS -X POST https://voidlab.club/api/v1/daily-news/2026-10-12/approve \
+    -H "Authorization: Bearer $TOKEN"
+
+  curl -sS -X POST https://voidlab.club/api/v1/daily-news/2026-10-12/publish \
+    -H "Authorization: Bearer $TOKEN"
+  ```
+- 结果：
+  - 旧任务已通过 `reset` 正式清理，删除旧文章 `5` 篇
+  - 当天精选池原始返回 `4` 条，因此从 AI HOT 全量池补充 `1` 条后重新发布
+  - 新文章 ID 为 `18,19,20,21,22`
+  - 公网 `GET https://voidlab.club/api/v1/public/articles` 已可读到新的第 `5` 篇文章
+- 是否回滚：否
+- 备注：本次仍未生成封面图；`cover_url` 为空的问题留待下一阶段“文章 + 图片生成上传”链路处理
+- 是否回滚：否
+- 备注：
+  - 本次只发布 API，未重新上传 `web` 与 `admin` 静态资源
+  - 解压源码包时出现 `LIBARCHIVE.xattr.com.apple.provenance` 扩展头警告，但不影响服务器解包与镜像构建
+
+### [S3-04] 本地验证图库版本构建产物
+
+- 时间：2026-10-13 22:42:43 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：对包含图库能力的前后端代码进行本地验证，执行后端测试、前端构建，并生成可发布产物
+- 命令：
+  ```bash
+  go test ./internal/service ./internal/http
+  npm run lint
+  bash scripts/package-frontends.sh
+  COPYFILE_DISABLE=1 tar --no-mac-metadata -czf dist-packages/api-build-context-slim.tgz \
+    apps/api/Dockerfile \
+    apps/api/go.mod apps/api/go.sum \
+    apps/api/cmd apps/api/internal
+  ```
+- 结果：
+  - 后端测试通过：`go test ./internal/service ./internal/http`
+  - `apps/admin` 的图库页新增类型错误已修复，前端可正常构建
+  - `npm run lint` 仍残留两条历史旧错误：
+    - `src/services/dashboardService.ts` 缺少 `dedupeKey`
+    - `src/services/mockData.ts` 的 `EventRecord` mock 字段不完整
+  - 前端产物已生成：
+    - `dist-packages/web-dist.tar.gz`：`3392770` bytes
+    - `dist-packages/admin-dist.tar.gz`：`425652` bytes
+  - API 服务器构建源码包已生成：
+    - `dist-packages/api-build-context-slim.tgz`：`78937` bytes
+- 是否回滚：否
+- 备注：本机 Docker 在尝试本地构建 `voidlab-api` 镜像时出现卡住现象，因此沿用“本地打前端包 + 上传 API 精简源码包到服务器重建镜像”的稳妥路径
+
+### [S4-07] 部署图库版本到线上环境
+
+- 时间：2026-10-13 22:42:43 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：上传最新前端包和 API 源码包，替换官网与后台静态资源，并在服务器重建 `voidlab-api` 镜像后重启 API 容器
+- 命令：
+  ```bash
+  scp dist-packages/web-dist.tar.gz \
+    dist-packages/admin-dist.tar.gz \
+    dist-packages/api-build-context-slim.tgz \
+    root@142.248.136.161:/opt/voidlab/packages/
+
+  ssh root@142.248.136.161 '
+    set -e
+    rm -rf /var/www/voidlab/web/* /var/www/voidlab/admin/*
+    tar -xzf /opt/voidlab/packages/web-dist.tar.gz -C /var/www/voidlab/web
+    tar -xzf /opt/voidlab/packages/admin-dist.tar.gz -C /var/www/voidlab/admin
+    rm -rf /opt/voidlab/build/api-src
+    mkdir -p /opt/voidlab/build/api-src
+    tar -xzf /opt/voidlab/packages/api-build-context-slim.tgz -C /opt/voidlab/build/api-src
+    cd /opt/voidlab/build/api-src
+    docker build -t voidlab-api:latest -f apps/api/Dockerfile .
+    docker image inspect voidlab-api:latest --format "{{.Id}} {{.Created}} {{.Architecture}}/{{.Os}}"
+    docker compose --env-file /opt/voidlab/deploy/voidlab.deploy.env \
+      -f /opt/voidlab/deploy/docker-compose.server.yml up -d --force-recreate --no-deps api
+    chmod -R 777 /opt/voidlab/data/sqlite /opt/voidlab/data/uploads
+    sleep 3
+    curl -sS http://127.0.0.1:8080/healthz
+  '
+  ```
+- 结果：
+  - 官网与后台静态资源已替换为最新版本
+  - 服务器已重建最新 API 镜像：`sha256:421ef1a64a88752b5a9d7afee3fa6cba8918a7d22846a568b58d42659443d2e1`
+  - 镜像架构确认：`amd64/linux`
+  - `voidlab-api` 已通过 `docker compose ... up -d --force-recreate --no-deps api` 完成标准替换
+  - 服务器侧健康检查通过：`GET http://127.0.0.1:8080/healthz` -> `200`
+- 是否回滚：否
+- 备注：解包过程中出现 `LIBARCHIVE.xattr.com.apple.provenance` 扩展头警告，但未影响服务器解包、镜像构建与容器启动
+
+### [S5-03] 验证图库功能已上线
+
+- 时间：2026-10-13 22:42:43 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：验证公网站点、健康检查与后台图库接口，确认图库能力已随本次版本上线
+- 命令：
+  ```bash
+  curl -sS https://voidlab.club/healthz
+  curl -I -sS https://voidlab.club
+  curl -I -sS https://admin.voidlab.club
+
+  TOKEN=$(curl -sS -X POST https://voidlab.club/api/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"admin","password":"admin"}' \
+    | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+  curl -sS https://voidlab.club/api/v1/media/galleries \
+    -H "Authorization: Bearer $TOKEN"
+  ```
+- 结果：
+  - `GET https://voidlab.club/healthz` -> `200`
+  - `HEAD https://voidlab.club` -> `200`
+  - `HEAD https://admin.voidlab.club` -> `200`
+  - 图库接口返回成功：`GET /api/v1/media/galleries` -> `200`
+  - 线上已存在默认图库：
+    - `title=基础图库`
+    - `slug=base-gallery`
+    - `item_count=80`
+- 是否回滚：否
+- 备注：说明历史可显示图片已被成功导入基础图库，当前线上已经具备“图库作为稳定封面池”的基础能力
+
+### [S3-05] 本地验证图库自动补封面链路
+
+- 时间：2026-10-13 23:04:13 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：将默认图库封面池接入 `dailynews.Publish()`，并通过单元测试验证“空封面自动补图、已有封面不覆盖”的行为
+- 命令：
+  ```bash
+  go test ./internal/dailynews
+  go test ./internal/service ./internal/http
+  ```
+- 结果：
+  - `dailynews.Publish()` 已增加默认图库封面分配逻辑
+  - 仅对 `cover_url` 为空的文章补图，已有封面保持不变
+  - 当图库相关表不存在时，发布流程会自动跳过补图，不影响旧库兼容
+  - 测试通过：
+    - `go test ./internal/dailynews`
+    - `go test ./internal/service ./internal/http`
+- 是否回滚：否
+- 备注：当前补图策略为“从默认图库/基础图库按顺序轮转取图”，先保证链路稳定，后续可再升级为更复杂的选图规则
+
+### [S4-08] 部署 daily-news 自动补封面版本到线上 API
+
+- 时间：2026-10-13 23:04:13 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：重新打包 API 精简源码包，上传服务器后重建 `voidlab-api` 镜像并替换线上 API 容器
+- 命令：
+  ```bash
+  COPYFILE_DISABLE=1 tar --no-mac-metadata -czf dist-packages/api-build-context-slim.tgz \
+    apps/api/Dockerfile \
+    apps/api/go.mod apps/api/go.sum \
+    apps/api/cmd apps/api/internal
+
+  scp dist-packages/api-build-context-slim.tgz \
+    root@142.248.136.161:/opt/voidlab/packages/api-build-context-slim.tgz
+
+  ssh root@142.248.136.161 '
+    set -e
+    rm -rf /opt/voidlab/build/api-src
+    mkdir -p /opt/voidlab/build/api-src
+    tar -xzf /opt/voidlab/packages/api-build-context-slim.tgz -C /opt/voidlab/build/api-src
+    cd /opt/voidlab/build/api-src
+    docker build -t voidlab-api:latest -f apps/api/Dockerfile .
+    docker image inspect voidlab-api:latest --format "{{.Id}} {{.Created}} {{.Architecture}}/{{.Os}}"
+    docker compose --env-file /opt/voidlab/deploy/voidlab.deploy.env \
+      -f /opt/voidlab/deploy/docker-compose.server.yml up -d --force-recreate --no-deps api
+    chmod -R 777 /opt/voidlab/data/sqlite /opt/voidlab/data/uploads
+    sleep 3
+    curl -sS http://127.0.0.1:8080/healthz
+  '
+  ```
+- 结果：
+  - 新 API 镜像已在服务器本机构建完成：`sha256:0326a42272d9135e88d9316d2a3e94fe50c685f23f6ffb2fde8903e8379fbd65`
+  - 镜像架构确认：`amd64/linux`
+  - `voidlab-api` 已通过 `docker compose ... up -d --force-recreate --no-deps api` 完成替换
+  - 服务器侧健康检查通过：`GET http://127.0.0.1:8080/healthz` -> `200`
+- 是否回滚：否
+- 备注：解包过程中仍出现 `LIBARCHIVE.xattr.com.apple.provenance` 扩展头警告，但未影响服务器构建与重启
+
+### [S5-04] 验证 daily-news 与图库接口发布后正常
+
+- 时间：2026-10-13 23:04:13 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：发布完成后验证健康检查、图库接口和每日资讯后台接口仍可正常访问
+- 命令：
+  ```bash
+  curl -sS https://voidlab.club/healthz
+
+  TOKEN=$(curl -sS -X POST https://voidlab.club/api/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"admin","password":"admin"}' \
+    | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+  curl -sS https://voidlab.club/api/v1/media/galleries \
+    -H "Authorization: Bearer $TOKEN"
+
+  curl -sS https://voidlab.club/api/v1/daily-news \
+    -H "Authorization: Bearer $TOKEN"
+  ```
+- 结果：
+  - `GET https://voidlab.club/healthz` -> `200`
+  - 图库接口正常返回，线上仍有默认图库 `base-gallery`，当前 `item_count=80`
+  - 每日资讯后台接口正常返回，说明本次 API 发布未破坏 daily-news 主链路
+- 是否回滚：否
+- 备注：本次线上验收以“接口可用 + 发布流程无回归”为主，自动补封面行为已在本地测试覆盖，未直接改写线上现有已发布文章数据
+
+### [OPS-02] 切换飞书日报目标群到 `voidlab运营`
+
+- 时间：2026-10-15 23:23:59 CST
+- 执行人：TRAE
+- 执行位置：服务器
+- 动作：将线上 `FEISHU_CHAT_ID` 从 `VoidLab灵感中` 切换为 `voidlab运营` 对应群 ID，并重启 API 使环境变量生效
+- 命令：
+  ```bash
+  ssh root@142.248.136.161 '
+    set -e
+    cp /opt/voidlab/deploy/voidlab.deploy.env /opt/voidlab/deploy/voidlab.deploy.env.bak-$(date +%Y%m%d%H%M%S)
+    sed -i "s/^FEISHU_CHAT_ID=.*/FEISHU_CHAT_ID=oc_72cf3401c86eb2026d931d2fed2b6b22/" /opt/voidlab/deploy/voidlab.deploy.env
+    docker compose --env-file /opt/voidlab/deploy/voidlab.deploy.env \
+      -f /opt/voidlab/deploy/docker-compose.server.yml up -d --no-deps api
+    docker exec voidlab-api sh -lc "printenv FEISHU_CHAT_ID"
+    curl -sS http://127.0.0.1:8080/healthz
+  '
+  ```
+- 结果：
+  - 线上 `FEISHU_CHAT_ID` 已切换为 `oc_72cf3401c86eb2026d931d2fed2b6b22`
+  - `voidlab-api` 容器已完成重建并恢复健康
+  - 服务器侧健康检查通过：`GET http://127.0.0.1:8080/healthz` -> `200`
+- 是否回滚：否
+- 备注：此前 `FEISHU_CHAT_ID=oc_79d4c3853b7a26bb4856e05de33a7642` 对应群 `VoidLab灵感中`，飞书原始返回 `230002`，表示机器人不在该群
+
+### [OPS-03] 重发 2026-10-15 每日资讯并验证飞书送达
+
+- 时间：2026-10-15 23:23:59 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：使用后台登录 token 调用正式 `daily-news send` 接口，重发当天日报并验证发送状态
+- 命令：
+  ```bash
+  TOKEN=$(curl -sS -X POST https://voidlab.club/api/v1/auth/login \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"admin","password":"admin"}' \
+    | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+  curl -sS -X POST https://voidlab.club/api/v1/daily-news/2026-10-15/send \
+    -H "Authorization: Bearer $TOKEN" \
+    -H 'Content-Type: application/json'
+
+  curl -sS https://voidlab.club/api/v1/daily-news \
+    -H "Authorization: Bearer $TOKEN"
+  ```
+- 结果：
+  - `POST /api/v1/daily-news/2026-10-15/send` 返回成功
+  - 当日日报发送状态已更新为 `sent`
+  - `last_error` 已清空
+  - 飞书消息 ID：`om_x100b623b4ee9d0a4dd280503ce2cfca`
+- 是否回滚：否
+- 备注：当前日报已成功投递到 `voidlab运营`

@@ -7,12 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"voidlabai/apps/api/internal/config"
+	"voidlabai/apps/api/internal/dailynews"
 	"voidlabai/apps/api/internal/http/middleware"
 	"voidlabai/apps/api/internal/repository"
 	"voidlabai/apps/api/internal/service"
 )
 
-func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
+func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.Engine {
 	router := gin.Default()
 	router.Static("/uploads", cfg.UploadsDir)
 
@@ -21,6 +22,7 @@ func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
 	eventRepo := repository.NewEventRepository(db)
 	builderRepo := repository.NewBuilderRepository(db)
 	mediaRepo := repository.NewMediaRepository(db)
+	mediaGalleryRepo := repository.NewMediaGalleryRepository(db)
 	leadRepo := repository.NewLeadRepository(db)
 	siteConfigRepo := repository.NewSiteConfigRepository(db)
 	auditLogRepo := repository.NewAuditLogRepository(db)
@@ -45,6 +47,7 @@ func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
 	builderHandler := NewBuilderHandler(service.NewBuilderService(builderRepo), auditLogService)
 	mediaService := service.NewMediaService(cfg, mediaRepo)
 	mediaHandler := NewMediaHandler(mediaService, auditLogService)
+	mediaGalleryHandler := NewMediaGalleryHandler(service.NewMediaGalleryService(mediaGalleryRepo), auditLogService)
 	knowledgeAssetService := service.NewKnowledgeAssetService(cfg, knowledgeSpaceRepo, knowledgeAssetRepo, mediaService)
 	knowledgeHandler := NewKnowledgeHandler(knowledgeService, knowledgeAssetService, auditLogService)
 	leadHandler := NewLeadHandler(service.NewLeadService(leadRepo), auditLogService)
@@ -124,6 +127,20 @@ func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
 		{
 			protected.GET("/dashboard/stats", dashboardHandler.Stats)
 
+			if len(news) > 0 && news[0] != nil {
+				handler := &DailyNewsHandler{news: news[0], audit: auditLogService}
+				daily := protected.Group("/daily-news")
+				daily.Use(middleware.RequireAnyRole("admin", "editor"))
+				daily.GET("", handler.List)
+				daily.POST("/collect", handler.Collect)
+				daily.POST("/:date/items", handler.AppendItems)
+				daily.POST("/:date/reset", middleware.RequireAnyRole("admin"), handler.Reset)
+				daily.POST("/:date/approve", handler.Action("approve"))
+				daily.POST("/:date/publish", handler.Action("publish"))
+				// Distribution is restricted to administrators.
+				daily.POST("/:date/send", middleware.RequireAnyRole("admin"), handler.Action("send"))
+			}
+
 			protected.GET("/articles", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"articles:read", "articles:write"}), articleHandler.List)
 			protected.GET("/articles/:id", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"articles:read", "articles:write"}), articleHandler.Detail)
 			protected.POST("/articles", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"articles:write"}), articleHandler.Create)
@@ -147,6 +164,15 @@ func NewRouter(cfg config.Config, db *sql.DB) *gin.Engine {
 
 			protected.GET("/media", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:read", "media:write"}), mediaHandler.List)
 			protected.POST("/media/upload", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaHandler.Upload)
+			protected.GET("/media/galleries", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:read", "media:write"}), mediaGalleryHandler.List)
+			protected.GET("/media/galleries/:id", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:read", "media:write"}), mediaGalleryHandler.Detail)
+			protected.POST("/media/galleries", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaGalleryHandler.Create)
+			protected.PUT("/media/galleries/:id", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaGalleryHandler.Update)
+			protected.DELETE("/media/galleries/:id", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaGalleryHandler.Delete)
+			protected.GET("/media/galleries/:id/items", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:read", "media:write"}), mediaGalleryHandler.ListItems)
+			protected.POST("/media/galleries/:id/items", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaGalleryHandler.AddItems)
+			protected.PUT("/media/galleries/:id/items/:itemID", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaGalleryHandler.UpdateItem)
+			protected.DELETE("/media/galleries/:id/items/:itemID", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"media:write"}), mediaGalleryHandler.DeleteItem)
 
 			protected.GET("/knowledge/spaces", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"knowledge:read", "knowledge:write"}), knowledgeHandler.ListSpaces)
 			protected.POST("/knowledge/spaces", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"knowledge:write"}), knowledgeHandler.CreateSpace)

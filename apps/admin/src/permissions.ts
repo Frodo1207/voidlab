@@ -11,13 +11,15 @@ export const menuItems: MenuItem[] = [
   { index: "/users", label: "用户管理", roles: ["admin"] },
   { index: "/agent-tokens", label: "Agent Tokens", roles: ["admin"] },
   { index: "/articles", label: "资讯管理", roles: ["admin", "editor"] },
+  { index: "/daily-news", label: "每日资讯", roles: ["admin", "editor"] },
   { index: "/events", label: "活动管理", roles: ["admin", "editor"] },
   { index: "/builders", label: "Builder 管理", roles: ["admin", "editor"] },
   { index: "/knowledge/spaces", label: "知识库", roles: ["admin", "editor"] },
   { index: "/leads", label: "Leads 管理", roles: ["admin", "ops"] },
   { index: "/site-configs", label: "站点配置", roles: ["admin"] },
   { index: "/audit-logs", label: "审计日志", roles: ["admin"] },
-  { index: "/media", label: "媒体资源", roles: ["admin", "editor"] }
+  { index: "/media", label: "媒体资源", roles: ["admin", "editor"] },
+  { index: "/media/galleries", label: "图库", roles: ["admin", "editor"] }
 ];
 
 export function hasRoleAccess(

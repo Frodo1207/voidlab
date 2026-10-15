@@ -58,6 +58,29 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
 
+                CREATE TABLE IF NOT EXISTS media_galleries (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT NOT NULL,
+                        slug TEXT NOT NULL UNIQUE,
+                        description TEXT NOT NULL DEFAULT '',
+                        is_default INTEGER NOT NULL DEFAULT 0,
+                        created_by INTEGER NOT NULL DEFAULT 1,
+                        updated_by INTEGER NOT NULL DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+
+                CREATE TABLE IF NOT EXISTS media_gallery_items (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        gallery_id INTEGER NOT NULL,
+                        media_asset_id INTEGER NOT NULL,
+                        alt_text TEXT NOT NULL DEFAULT '',
+                        sort_order INTEGER NOT NULL DEFAULT 10,
+                        is_active INTEGER NOT NULL DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(gallery_id, media_asset_id)
+                );
+
                 CREATE TABLE IF NOT EXISTS articles (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         title TEXT NOT NULL,
@@ -302,6 +325,11 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate media asset schema: %w", err)
 	}
 
+	if err := migrateMediaGallerySchema(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("migrate media gallery schema: %w", err)
+	}
+
 	if err := migrateAuditLogSchema(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("migrate audit schema: %w", err)
@@ -330,6 +358,11 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
 	if err := seedSiteConfigs(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("seed site configs: %w", err)
+	}
+
+	if err := seedDefaultMediaGallery(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("seed default media gallery: %w", err)
 	}
 
 	if err := db.Ping(); err != nil {
@@ -396,6 +429,37 @@ func migrateMediaAssetSchema(db *sql.DB) error {
 		if !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func migrateMediaGallerySchema(db *sql.DB) error {
+	statements := []string{
+		`ALTER TABLE media_galleries ADD COLUMN description TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE media_galleries ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE media_galleries ADD COLUMN created_by INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE media_galleries ADD COLUMN updated_by INTEGER NOT NULL DEFAULT 1`,
+		`ALTER TABLE media_galleries ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP`,
+		`ALTER TABLE media_gallery_items ADD COLUMN alt_text TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE media_gallery_items ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 10`,
+		`ALTER TABLE media_gallery_items ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1`,
+	}
+
+	for _, statement := range statements {
+		if _, err := db.Exec(statement); err != nil {
+			lowered := strings.ToLower(err.Error())
+			if !strings.Contains(lowered, "duplicate column name") && !strings.Contains(lowered, "no such table") {
+				return err
+			}
+		}
+	}
+
+	if _, err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_media_gallery_items_unique
+		ON media_gallery_items(gallery_id, media_asset_id)
+	`); err != nil {
+		return err
 	}
 
 	return nil
@@ -642,6 +706,50 @@ func seedSiteConfigs(db *sql.DB) error {
 		); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func seedDefaultMediaGallery(db *sql.DB) error {
+	if _, err := db.Exec(`
+		INSERT INTO media_galleries (title, slug, description, is_default, created_by, updated_by)
+		VALUES ('基础图库', 'base-gallery', '系统初始化导入的基础图片集合，可作为文章封面与运营选图池。', 1, 1, 1)
+		ON CONFLICT(slug) DO NOTHING
+	`); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(`
+		UPDATE media_galleries
+		SET is_default = CASE WHEN slug = 'base-gallery' THEN 1 ELSE is_default END
+		WHERE slug = 'base-gallery'
+	`); err != nil {
+		return err
+	}
+
+	if _, err := db.Exec(`
+		INSERT INTO media_gallery_items (gallery_id, media_asset_id, alt_text, sort_order, is_active)
+		SELECT g.id, m.id, '', (m.id * 10), 1
+		FROM media_galleries g
+		INNER JOIN media_assets m
+			ON (
+				lower(m.content_type) LIKE 'image/%'
+				OR lower(m.file_name) LIKE '%.jpg'
+				OR lower(m.file_name) LIKE '%.jpeg'
+				OR lower(m.file_name) LIKE '%.png'
+				OR lower(m.file_name) LIKE '%.webp'
+				OR lower(m.file_name) LIKE '%.gif'
+				OR lower(m.file_name) LIKE '%.svg'
+			)
+		WHERE g.slug = 'base-gallery'
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM media_gallery_items i
+			WHERE i.gallery_id = g.id AND i.media_asset_id = m.id
+		  )
+	`); err != nil {
+		return err
 	}
 
 	return nil

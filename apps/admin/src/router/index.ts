@@ -6,6 +6,7 @@ import UserListView from "../views/users/UserListView.vue";
 import AgentTokenListView from "../views/agent-tokens/AgentTokenListView.vue";
 import ArticleListView from "../views/articles/ArticleListView.vue";
 import ArticleEditorView from "../views/articles/ArticleEditorView.vue";
+import DailyNewsListView from "../views/daily-news/DailyNewsListView.vue";
 import EventListView from "../views/events/EventListView.vue";
 import EventEditorView from "../views/events/EventEditorView.vue";
 import BuilderListView from "../views/builders/BuilderListView.vue";
@@ -16,6 +17,7 @@ import KnowledgeEntryListView from "../views/knowledge/KnowledgeEntryListView.vu
 import KnowledgeEntryEditorView from "../views/knowledge/KnowledgeEntryEditorView.vue";
 import KnowledgeAccessTokenListView from "../views/knowledge/KnowledgeAccessTokenListView.vue";
 import MediaLibraryView from "../views/media/MediaLibraryView.vue";
+import MediaGalleryView from "../views/media/MediaGalleryView.vue";
 import LeadListView from "../views/leads/LeadListView.vue";
 import LeadDetailView from "../views/leads/LeadDetailView.vue";
 import SiteConfigView from "../views/site-configs/SiteConfigView.vue";
@@ -59,6 +61,12 @@ const router = createRouter({
           name: "articles",
           component: ArticleListView,
           meta: { title: "资讯管理", roles: ["admin", "editor"] }
+        },
+        {
+          path: "daily-news",
+          name: "daily-news",
+          component: DailyNewsListView,
+          meta: { title: "每日资讯", roles: ["admin", "editor"] }
         },
         {
           path: "articles/new",
@@ -160,6 +168,12 @@ const router = createRouter({
           name: "media",
           component: MediaLibraryView,
           meta: { title: "媒体资源", roles: ["admin", "editor"] }
+        },
+        {
+          path: "media/galleries",
+          name: "media-galleries",
+          component: MediaGalleryView,
+          meta: { title: "图库管理", roles: ["admin", "editor"] }
         },
         {
           path: "leads",

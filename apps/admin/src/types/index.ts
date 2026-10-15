@@ -106,6 +106,31 @@ export interface MediaAssetRecord {
   createdAt: string;
 }
 
+export interface MediaGalleryRecord {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  isDefault: boolean;
+  itemCount: number;
+  coverUrl: string;
+  updatedAt: string;
+}
+
+export interface MediaGalleryItemRecord {
+  id: number;
+  galleryId: number;
+  mediaAssetId: number;
+  fileName: string;
+  objectUrl: string;
+  contentType: string;
+  fileSizeLabel: string;
+  altText: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface LeadLogRecord {
   id: number;
   leadId: number;

@@ -62,7 +62,10 @@ onMounted(() => {
         <h2>媒体资源</h2>
         <p>当前已支持真实上传与媒体列表，可复制 URL 用于文章、活动和 Builder 封面。</p>
       </div>
-      <el-button type="primary" :loading="uploading" @click="openFilePicker">上传资源</el-button>
+      <div class="toolbar-actions">
+        <el-button @click="$router.push('/media/galleries')">进入图库</el-button>
+        <el-button type="primary" :loading="uploading" @click="openFilePicker">上传资源</el-button>
+      </div>
     </div>
 
     <input ref="fileInputRef" class="hidden-input" type="file" accept="image/*" @change="handleFileChange" />
@@ -99,6 +102,12 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 h2 {

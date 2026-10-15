@@ -42,6 +42,14 @@ func NewMediaRepository(db *sql.DB) *MediaRepository {
 	return &MediaRepository{db: db}
 }
 
+type MediaGalleryRepository struct {
+	db *sql.DB
+}
+
+func NewMediaGalleryRepository(db *sql.DB) *MediaGalleryRepository {
+	return &MediaGalleryRepository{db: db}
+}
+
 type LeadRepository struct {
 	db *sql.DB
 }

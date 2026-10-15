@@ -13,9 +13,11 @@ const visibleMenuItems = computed(() =>
 );
 
 const activeMenu = computed(() => {
+  if (route.path.startsWith("/media/galleries")) return "/media/galleries";
   if (route.path.startsWith("/users")) return "/users";
   if (route.path.startsWith("/agent-tokens")) return "/agent-tokens";
   if (route.path.startsWith("/articles")) return "/articles";
+  if (route.path.startsWith("/daily-news")) return "/daily-news";
   if (route.path.startsWith("/events")) return "/events";
   if (route.path.startsWith("/builders")) return "/builders";
   if (route.path.startsWith("/knowledge")) return "/knowledge/spaces";
