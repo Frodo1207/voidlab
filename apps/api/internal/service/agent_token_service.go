@@ -13,6 +13,9 @@ import (
 )
 
 var allowedAgentScopes = map[string]struct{}{
+	"daily_news:read":        {},
+	"daily_news:write":       {},
+	"daily_news:send":        {},
 	"articles:read":          {},
 	"articles:write":         {},
 	"events:read":            {},

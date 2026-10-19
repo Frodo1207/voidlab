@@ -67,13 +67,13 @@ type Snapshot struct {
 }
 
 type Article struct {
-	ID      int64  `json:"id"`
-	Title   string `json:"title"`
-	Slug    string `json:"slug"`
-	Summary string `json:"summary"`
+	ID       int64  `json:"id"`
+	Title    string `json:"title"`
+	Slug     string `json:"slug"`
+	Summary  string `json:"summary"`
 	CoverURL string `json:"cover_url"`
-	Content string `json:"content"`
-	Status  string `json:"status"`
+	Content  string `json:"content"`
+	Status   string `json:"status"`
 }
 
 type Task struct {
@@ -92,6 +92,23 @@ type Task struct {
 	UpdatedAt    string    `json:"updated_at"`
 	Snapshot     Snapshot  `json:"snapshot"`
 	Articles     []Article `json:"articles,omitempty"`
+	CopyText     string    `json:"-"`
+}
+
+type DeliveryDigest struct {
+	Date        string
+	ItemCount   int
+	ReadingText string
+	CopyText    string
+	Articles    []DigestArticle
+}
+
+type DigestArticle struct {
+	Title       string
+	Summary     string
+	URL         string
+	SourceName  string
+	OriginalURL string
 }
 
 type Service struct {
@@ -167,7 +184,8 @@ CREATE TABLE IF NOT EXISTS dailynews_tasks (
  snapshot_json TEXT NOT NULL, reviewer_id INTEGER NOT NULL DEFAULT 0, review_note TEXT NOT NULL DEFAULT '',
  send_status TEXT NOT NULL DEFAULT 'pending' CHECK(send_status IN ('pending','sending','failed','sent')),
  send_attempts INTEGER NOT NULL DEFAULT 0, send_uuid TEXT NOT NULL UNIQUE,
- send_text TEXT NOT NULL DEFAULT '', message_id TEXT NOT NULL DEFAULT '', last_error TEXT NOT NULL DEFAULT '',
+ send_text TEXT NOT NULL DEFAULT '', send_copy_text TEXT NOT NULL DEFAULT '',
+ message_id TEXT NOT NULL DEFAULT '', last_error TEXT NOT NULL DEFAULT '',
  send_started_at INTEGER NOT NULL DEFAULT 0,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 );
@@ -180,8 +198,13 @@ CREATE TABLE IF NOT EXISTS dailynews_task_articles (
 	if err != nil {
 		return nil, err
 	}
+	if _, err := tx.ExecContext(ctx, `ALTER TABLE dailynews_tasks ADD COLUMN send_copy_text TEXT NOT NULL DEFAULT ''`); err != nil &&
+		!strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
 	// Refresh unpublished previews, but never rewrite a frozen published message.
-	rows, err := tx.QueryContext(ctx, `SELECT `+taskColumns+` FROM dailynews_tasks WHERE send_text='' OR status!='published'`)
+	rows, err := tx.QueryContext(ctx, `SELECT `+taskColumns+` FROM dailynews_tasks
+WHERE send_text='' OR send_copy_text='' OR status!='published'`)
 	if err != nil {
 		return nil, err
 	}
@@ -204,11 +227,15 @@ CREATE TABLE IF NOT EXISTS dailynews_task_articles (
 		if err != nil {
 			return nil, err
 		}
+		message := s.renderMessage(task.Date, task.Snapshot, articles)
+		copyText := s.renderCopyText(task.Date, task.Snapshot, articles)
 		if task.Status != "published" {
-			articles = nil
+			copyText = message
+		} else if strings.TrimSpace(task.Message) != "" {
+			message = task.Message
 		}
-		if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET send_text=? WHERE id=?`,
-			s.renderMessage(task.Date, task.Snapshot, articles), task.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET send_text=?,send_copy_text=? WHERE id=?`,
+			message, copyText, task.ID); err != nil {
 			return nil, err
 		}
 	}
@@ -352,7 +379,7 @@ VALUES(?,?,?,?,?) ON CONFLICT(date) DO NOTHING`, date, string(data), sendUUID(da
 		var used int
 		err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dailynews_task_articles WHERE item_id=? OR source_url=?)
 OR EXISTS(SELECT 1 FROM articles WHERE source_url=? OR slug=?)`,
-			item.ID, item.Links.Original, item.Links.Original, articleSlug(item.ID)).Scan(&used)
+			item.ID, item.Links.Original, item.Links.Original, articleSlug(item)).Scan(&used)
 		if err != nil {
 			return Task{}, err
 		}
@@ -360,7 +387,7 @@ OR EXISTS(SELECT 1 FROM articles WHERE source_url=? OR slug=?)`,
 			continue
 		}
 		result, err = tx.ExecContext(ctx, `INSERT INTO articles(title,slug,summary,category,content,source_name,source_url,status)
-VALUES(?,?,?,?,?,?,?,'draft')`, item.Title, articleSlug(item.ID), item.Summary, item.Category,
+VALUES(?,?,?,?,?,?,?,'draft')`, item.Title, articleSlug(item), item.Summary, item.Category,
 			articleContent(item, snapshot), item.Source.Name, item.Links.Original)
 		if err != nil {
 			return Task{}, err
@@ -383,8 +410,9 @@ VALUES(?,?,?,?,?,?,?,'draft')`, item.Title, articleSlug(item.ID), item.Summary, 
 	if err != nil {
 		return Task{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET send_text=? WHERE id=?`,
-		s.renderMessage(date, snapshot, articles), taskID); err != nil {
+	preview := s.renderMessage(date, snapshot, articles)
+	if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET send_text=?,send_copy_text=? WHERE id=?`,
+		preview, preview, taskID); err != nil {
 		return Task{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -441,7 +469,7 @@ func (s *Service) AppendItems(ctx context.Context, id int64, items []Item) (Task
 		var used int
 		err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dailynews_task_articles WHERE item_id=? OR source_url=?)
 OR EXISTS(SELECT 1 FROM articles WHERE source_url=? OR slug=?)`,
-			item.ID, item.Links.Original, item.Links.Original, articleSlug(item.ID)).Scan(&used)
+			item.ID, item.Links.Original, item.Links.Original, articleSlug(item)).Scan(&used)
 		if err != nil {
 			return Task{}, err
 		}
@@ -449,7 +477,7 @@ OR EXISTS(SELECT 1 FROM articles WHERE source_url=? OR slug=?)`,
 			continue
 		}
 		result, err := tx.ExecContext(ctx, `INSERT INTO articles(title,slug,summary,category,content,source_name,source_url,status)
-VALUES(?,?,?,?,?,?,?,'draft')`, item.Title, articleSlug(item.ID), item.Summary, item.Category,
+VALUES(?,?,?,?,?,?,?,'draft')`, item.Title, articleSlug(item), item.Summary, item.Category,
 			articleContent(item, task.Snapshot), item.Source.Name, item.Links.Original)
 		if err != nil {
 			return Task{}, err
@@ -482,8 +510,9 @@ VALUES(?,?,?,?,?,?,?,'draft')`, item.Title, articleSlug(item.ID), item.Summary, 
 	if err != nil {
 		return Task{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET snapshot_json=?,send_text=?,updated_at=? WHERE id=?`,
-		string(data), s.renderMessage(task.Date, task.Snapshot, articles), s.now().UTC().Format(time.RFC3339Nano), id); err != nil {
+	preview := s.renderMessage(task.Date, task.Snapshot, articles)
+	if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET snapshot_json=?,send_text=?,send_copy_text=?,updated_at=? WHERE id=?`,
+		string(data), preview, preview, s.now().UTC().Format(time.RFC3339Nano), id); err != nil {
 		return Task{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -555,9 +584,16 @@ func (s *Service) Reset(ctx context.Context, id int64) ([]int64, error) {
 	return articleIDs, nil
 }
 
-func articleSlug(id string) string {
-	sum := sha256.Sum256([]byte(id))
-	return "aihot-" + hex.EncodeToString(sum[:])
+func articleSlug(item Item) string {
+	base := slugify(item.Title)
+	if base == "" {
+		base = "daily-insight"
+	}
+	if len(base) > 48 {
+		base = strings.Trim(base[:48], "-")
+	}
+	sum := sha256.Sum256([]byte(item.ID + "|" + item.Links.Original))
+	return "insight-" + base + "-" + hex.EncodeToString(sum[:4])
 }
 
 func sendUUID(date string) string {
@@ -586,9 +622,25 @@ func markdownURL(raw string) string {
 	return strings.NewReplacer("(", "%28", ")", "%29", " ", "%20", "<", "%3C", ">", "%3E").Replace(raw)
 }
 
+func slugify(text string) string {
+	var b strings.Builder
+	lastHyphen := false
+	for _, r := range strings.ToLower(strings.TrimSpace(text)) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			b.WriteRune(r)
+			lastHyphen = false
+		case !lastHyphen:
+			b.WriteByte('-')
+			lastHyphen = true
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
 func (s *Service) renderMessage(date string, snapshot Snapshot, articles []Article) string {
 	var text strings.Builder
-	fmt.Fprintf(&text, "# AI 日报 | %s\n\n过去 24 小时 · %d 条精选\n", date, len(snapshot.Items))
+	fmt.Fprintf(&text, "VOIDLAB 每日资讯 | %s\n\n过去 24 小时 · %d 条资讯\n", date, len(snapshot.Items))
 	if len(snapshot.Items) == 0 {
 		text.WriteString("\n过去 24 小时暂无精选资讯。\n")
 	}
@@ -600,29 +652,83 @@ func (s *Service) renderMessage(date string, snapshot Snapshot, articles []Artic
 	}
 	if len(publishedArticles) > 0 {
 		for i, article := range publishedArticles {
-			fmt.Fprintf(&text, "\n## %d. [%s](%s/insights/%s)\n\n%s\n",
-				i+1, markdownText(article.Title), markdownURL(s.publicURL),
-				markdownURL(url.PathEscape(article.Slug)), article.Summary)
+			fmt.Fprintf(&text, "\n%d. %s\n%s\n站内链接：%s/insights/%s\n",
+				i+1, article.Title, article.Summary, s.publicURL, url.PathEscape(article.Slug))
 		}
-		text.WriteString("\n## 原始来源\n")
+		text.WriteString("\n原始来源\n")
 		for i, item := range snapshot.Items {
-			fmt.Fprintf(&text, "\n- %d. %s · %s · [原文](%s)\n",
-				i+1, markdownText(item.Title), markdownText(item.Source.Name), markdownURL(item.Links.Original))
+			fmt.Fprintf(&text, "\n%d. %s · %s\n原文链接：%s\n",
+				i+1, item.Title, item.Source.Name, item.Links.Original)
 		}
 		text.WriteString("\n" + attributionText(snapshot))
 		return text.String()
 	}
 	for i, item := range snapshot.Items {
-		fmt.Fprintf(&text, "\n## %d. [%s](%s)\n\n%s\n\n来源：%s · [原文](%s)\n",
-			i+1, markdownText(item.Title), markdownURL(item.Links.Original), item.Summary,
-			markdownText(item.Source.Name), markdownURL(item.Links.Original))
+		fmt.Fprintf(&text, "\n%d. %s\n%s\n来源：%s\n原文链接：%s\n",
+			i+1, item.Title, item.Summary, item.Source.Name, item.Links.Original)
 	}
 	text.WriteString("\n" + attributionText(snapshot))
 	return text.String()
 }
 
+func (s *Service) renderCopyText(date string, snapshot Snapshot, articles []Article) string {
+	var text strings.Builder
+	fmt.Fprintf(&text, "VOIDLAB 每日资讯 | %s\n\n过去 24 小时 · %d 条资讯\n", date, len(snapshot.Items))
+	publishedArticles := make([]Article, 0, len(articles))
+	for _, article := range articles {
+		if article.Status == "published" {
+			publishedArticles = append(publishedArticles, article)
+		}
+	}
+	if len(publishedArticles) == 0 {
+		if len(snapshot.Items) == 0 {
+			text.WriteString("\n过去 24 小时暂无精选资讯。\n")
+			return text.String()
+		}
+		for i, item := range snapshot.Items {
+			fmt.Fprintf(&text, "\n%d. %s\n%s\n原文链接：%s\n", i+1, item.Title, item.Summary, item.Links.Original)
+		}
+		return text.String()
+	}
+	for i, article := range publishedArticles {
+		fmt.Fprintf(&text, "\n%d. %s\n%s\n站内链接：%s/insights/%s\n",
+			i+1, article.Title, article.Summary, s.publicURL, url.PathEscape(article.Slug))
+	}
+	return text.String()
+}
+
+func (s *Service) buildDigest(task Task) DeliveryDigest {
+	articles := make([]DigestArticle, 0, len(task.Articles))
+	for _, article := range task.Articles {
+		if article.Status != "published" {
+			continue
+		}
+		sourceName := ""
+		originalURL := ""
+		if len(articles) < len(task.Snapshot.Items) {
+			item := task.Snapshot.Items[len(articles)]
+			sourceName = item.Source.Name
+			originalURL = item.Links.Original
+		}
+		articles = append(articles, DigestArticle{
+			Title:       article.Title,
+			Summary:     article.Summary,
+			URL:         s.publicURL + "/insights/" + url.PathEscape(article.Slug),
+			SourceName:  sourceName,
+			OriginalURL: originalURL,
+		})
+	}
+	return DeliveryDigest{
+		Date:        task.Date,
+		ItemCount:   len(task.Snapshot.Items),
+		ReadingText: s.renderMessage(task.Date, task.Snapshot, task.Articles),
+		CopyText:    s.renderCopyText(task.Date, task.Snapshot, task.Articles),
+		Articles:    articles,
+	}
+}
+
 const taskColumns = `id,date,status,send_status,send_attempts,send_uuid,message_id,last_error,
-reviewer_id,review_note,created_at,updated_at,snapshot_json,send_text`
+reviewer_id,review_note,created_at,updated_at,snapshot_json,send_text,send_copy_text`
 
 type taskScanner interface{ Scan(...any) error }
 
@@ -631,7 +737,7 @@ func scanTask(row taskScanner) (Task, error) {
 	var payload string
 	err := row.Scan(&task.ID, &task.Date, &task.Status, &task.SendStatus, &task.SendAttempts,
 		&task.SendUUID, &task.MessageID, &task.LastError, &task.ReviewerID, &task.ReviewNote,
-		&task.CreatedAt, &task.UpdatedAt, &payload, &task.Message)
+		&task.CreatedAt, &task.UpdatedAt, &payload, &task.Message, &task.CopyText)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Task{}, ErrNotFound
 	}
@@ -670,8 +776,12 @@ func (s *Service) Get(ctx context.Context, id int64) (Task, error) {
 	}
 	if task.Status != "published" {
 		task.Message = s.renderMessage(task.Date, task.Snapshot, nil)
+		task.CopyText = task.Message
 	} else if task.Message == "" {
 		task.Message = s.renderMessage(task.Date, task.Snapshot, task.Articles)
+	}
+	if task.Status == "published" && task.CopyText == "" {
+		task.CopyText = s.renderCopyText(task.Date, task.Snapshot, task.Articles)
 	}
 	return task, tx.Commit()
 }
@@ -797,96 +907,19 @@ updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id IN (SELECT article_id FROM da
 	} else if n != int64(linked) {
 		return Task{}, ErrInvalidState
 	}
-	if err := s.assignDefaultGalleryCovers(ctx, tx, articles, userID); err != nil {
-		return Task{}, err
-	}
 	articles, err = readArticles(ctx, tx, id)
 	if err != nil {
 		return Task{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET send_text=? WHERE id=?`,
-		s.renderMessage(task.Date, task.Snapshot, articles), id); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE dailynews_tasks SET send_text=?,send_copy_text=? WHERE id=?`,
+		s.renderMessage(task.Date, task.Snapshot, articles),
+		s.renderCopyText(task.Date, task.Snapshot, articles), id); err != nil {
 		return Task{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return Task{}, err
 	}
 	return s.Get(ctx, id)
-}
-
-func (s *Service) assignDefaultGalleryCovers(ctx context.Context, tx *sql.Tx, articles []Article, userID int64) error {
-	coverPool, err := loadDefaultGalleryCoverPool(ctx, tx)
-	if err != nil {
-		if isMissingGallerySchemaError(err) {
-			return nil
-		}
-		return err
-	}
-	if len(coverPool) == 0 {
-		return nil
-	}
-
-	coverIndex := 0
-	for _, article := range articles {
-		if strings.TrimSpace(article.CoverURL) != "" {
-			continue
-		}
-		coverURL := coverPool[coverIndex%len(coverPool)]
-		coverIndex++
-		if _, err := tx.ExecContext(ctx, `UPDATE articles
-SET cover_url=?,updated_by=?,updated_at=CURRENT_TIMESTAMP
-WHERE id=? AND TRIM(cover_url)=''`, coverURL, userID, article.ID); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func loadDefaultGalleryCoverPool(ctx context.Context, tx *sql.Tx) ([]string, error) {
-	rows, err := tx.QueryContext(ctx, `
-SELECT DISTINCT m.object_url
-FROM media_galleries g
-INNER JOIN media_gallery_items i ON i.gallery_id = g.id
-INNER JOIN media_assets m ON m.id = i.media_asset_id
-WHERE i.is_active = 1
-  AND TRIM(m.object_url) != ''
-  AND (
-    g.is_default = 1
-    OR g.slug = 'base-gallery'
-  )
-ORDER BY
-  CASE WHEN g.is_default = 1 THEN 0 ELSE 1 END,
-  CASE WHEN g.slug = 'base-gallery' THEN 0 ELSE 1 END,
-  g.updated_at DESC,
-  i.sort_order ASC,
-  i.id ASC`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	covers := make([]string, 0)
-	for rows.Next() {
-		var coverURL string
-		if err := rows.Scan(&coverURL); err != nil {
-			return nil, err
-		}
-		coverURL = strings.TrimSpace(coverURL)
-		if coverURL == "" {
-			continue
-		}
-		covers = append(covers, coverURL)
-	}
-	return covers, rows.Err()
-}
-
-func isMissingGallerySchemaError(err error) bool {
-	if err == nil {
-		return false
-	}
-	return strings.Contains(err.Error(), "no such table: media_galleries") ||
-		strings.Contains(err.Error(), "no such table: media_gallery_items") ||
-		strings.Contains(err.Error(), "no such table: media_assets")
 }
 
 // Send claims a persisted lease. Crashed/ambiguous attempts reuse the same UUID and text.
@@ -931,13 +964,34 @@ WHERE id=? AND status='published' AND `+condition,
 		}
 		return Task{}, ErrInvalidState
 	}
-	var text string
-	if err := s.db.QueryRowContext(ctx, `SELECT send_text FROM dailynews_tasks WHERE id=?`, id).Scan(&text); err != nil {
+	var text, copyText string
+	if err := s.db.QueryRowContext(ctx, `SELECT send_text,send_copy_text FROM dailynews_tasks WHERE id=?`, id).Scan(&text, &copyText); err != nil {
 		return Task{}, err
 	}
 	sendCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	messageID, sendErr := s.sender.Send(sendCtx, text, task.SendUUID)
+	digest := s.buildDigest(task)
+	if strings.TrimSpace(text) != "" {
+		digest.ReadingText = text
+	}
+	if strings.TrimSpace(copyText) != "" {
+		digest.CopyText = copyText
+	}
+	if strings.TrimSpace(digest.ReadingText) == "" {
+		digest.ReadingText = s.renderMessage(task.Date, task.Snapshot, task.Articles)
+	}
+	if strings.TrimSpace(digest.CopyText) == "" {
+		digest.CopyText = digest.ReadingText
+	}
+	messageID := ""
+	var sendErr error
+	if sender, ok := s.sender.(interface {
+		SendDigest(context.Context, DeliveryDigest, string) (string, error)
+	}); ok {
+		messageID, sendErr = sender.SendDigest(sendCtx, digest, task.SendUUID)
+	} else {
+		messageID, sendErr = s.sender.Send(sendCtx, digest.CopyText, task.SendUUID)
+	}
 	if sendErr == nil && strings.TrimSpace(messageID) == "" {
 		sendErr = errors.New("dailynews: sender returned empty message ID")
 	}

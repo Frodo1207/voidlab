@@ -26,6 +26,21 @@ services:
     depends_on:
       - minio
 
+  dailynews-runner:
+    image: voidlab-api:latest
+    container_name: voidlab-dailynews-runner
+    restart: unless-stopped
+    entrypoint: ["/app/voidlab-dailynews-runner"]
+    environment:
+      VOIDLAB_API_BASE_URL: "${VOIDLAB_API_BASE_URL:-http://api:8080}"
+      VOIDLAB_AGENT_TOKEN: "${VOIDLAB_AGENT_TOKEN:-}"
+      DAILY_NEWS_RUNNER_ENABLED: "${DAILY_NEWS_RUNNER_ENABLED:-false}"
+      DAILY_NEWS_RUNNER_TIME: "${DAILY_NEWS_RUNNER_TIME:-10:30}"
+      DAILY_NEWS_TARGET_COUNT: "${DAILY_NEWS_TARGET_COUNT:-5}"
+      DAILY_NEWS_COVER_COMMAND: "${DAILY_NEWS_COVER_COMMAND:-}"
+    depends_on:
+      - api
+
   minio:
     image: docker.m.daocloud.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
     container_name: voidlab-minio

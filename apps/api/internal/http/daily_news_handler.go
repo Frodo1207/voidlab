@@ -22,7 +22,7 @@ func (h *DailyNewsHandler) response(ctx *gin.Context, task dailynews.Task) gin.H
 	}
 	return gin.H{
 		"date": task.Date, "status": task.Status, "send_status": task.SendStatus,
-		"items": task.Snapshot.Items, "article_ids": ids, "message": task.Message,
+		"items": task.Snapshot.Items, "article_ids": ids, "message": task.Message, "copy_text": task.CopyText,
 		"message_id": task.MessageID, "last_error": task.LastError,
 	}
 }

@@ -412,7 +412,7 @@ func TestAppendItemsExtendsPendingTaskToFiveArticles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(task.Message, "https://voidlab.club/insights/") || !strings.Contains(task.Message, "## 原始来源") {
+	if !strings.Contains(task.Message, "https://voidlab.club/insights/") || !strings.Contains(task.Message, "原始来源") {
 		t.Fatalf("published digest should prefer site links: %s", task.Message)
 	}
 	if _, err := s.AppendItems(ctx, task.ID, []Item{snapshot.Items[5]}); !errors.Is(err, ErrInvalidState) {
@@ -420,7 +420,7 @@ func TestAppendItemsExtendsPendingTaskToFiveArticles(t *testing.T) {
 	}
 }
 
-func TestPublishAssignsGalleryCoverPoolWithoutOverwritingExistingCover(t *testing.T) {
+func TestPublishKeepsCoverBindingOutsideDailyNewsService(t *testing.T) {
 	ctx := context.Background()
 	db := database(t)
 	seedDefaultGallery(t, db, []string{
@@ -446,12 +446,8 @@ func TestPublishAssignsGalleryCoverPoolWithoutOverwritingExistingCover(t *testin
 		t.Fatalf("existing cover should be preserved, got %s", task.Articles[0].CoverURL)
 	}
 	for index, article := range task.Articles[1:] {
-		if article.CoverURL == "" {
-			t.Fatalf("article %d missing gallery cover", index+1)
-		}
-		if article.CoverURL != "https://voidlab.club/uploads/gallery-cover-1.jpg" &&
-			article.CoverURL != "https://voidlab.club/uploads/gallery-cover-2.jpg" {
-			t.Fatalf("unexpected gallery cover: %s", article.CoverURL)
+		if article.CoverURL != "" {
+			t.Fatalf("article %d should wait for formal cover binding, got %s", index+1, article.CoverURL)
 		}
 	}
 }
@@ -551,7 +547,7 @@ func TestReviewPublishAndSendRetry(t *testing.T) {
 		t.Fatalf("retry: %+v %v", task, err)
 	}
 	if len(uuids) != 2 || uuids[0] != uuids[1] || texts[0] != texts[1] ||
-		!strings.Contains(texts[0], "/insights/aihot-") || !strings.Contains(texts[0], "Title 7") {
+		!strings.Contains(texts[0], "VOIDLAB 每日资讯") || !strings.Contains(texts[0], "https://voidlab.club/insights/") {
 		t.Fatal("retry text/UUID or digest is incorrect")
 	}
 	if _, err := s.Send(ctx, task.ID); err != nil || len(uuids) != 2 {
@@ -579,15 +575,15 @@ func TestSparseDailyPreviewPublicationAndDelivery(t *testing.T) {
 				strings.Contains(preview, "## 站内文章") {
 				t.Fatal("unpublished preview contains internal article links")
 			}
-			if !strings.Contains(preview, "# AI 日报") || !strings.Contains(preview, "过去 24 小时") ||
+			if !strings.Contains(preview, "VOIDLAB 每日资讯") || !strings.Contains(preview, "过去 24 小时") ||
 				!strings.Contains(preview, "第三方原文版权归原作者") {
 				t.Fatalf("invalid Chinese preview: %s", preview)
 			}
 			if count == 0 && !strings.Contains(preview, "暂无精选资讯") {
 				t.Fatal("empty day has no explanation")
 			}
-			if count > 0 && (!strings.Contains(preview, "## 1. [Title 0](https://example.com/news/0)") ||
-				!strings.Contains(preview, "[原文](https://example.com/news/0)") ||
+			if count > 0 && (!strings.Contains(preview, "1. Title 0") ||
+				!strings.Contains(preview, "原文链接：https://example.com/news/0") ||
 				!strings.Contains(task.Articles[0].Content, "### 来源") ||
 				strings.Contains(preview, "AI HOT") ||
 				strings.Contains(task.Articles[0].Content, "AI HOT")) {
@@ -611,7 +607,7 @@ func TestSparseDailyPreviewPublicationAndDelivery(t *testing.T) {
 			frozen := task.Message
 			if count > 0 {
 				for _, article := range task.Articles {
-					want := fmt.Sprintf("[Changed](https://voidlab.club/insights/%s)", article.Slug)
+					want := fmt.Sprintf("站内链接：https://voidlab.club/insights/%s", article.Slug)
 					if !strings.Contains(frozen, want) || article.Status != "published" {
 						t.Fatalf("latest published article missing: %s", frozen)
 					}
@@ -628,7 +624,7 @@ func TestSparseDailyPreviewPublicationAndDelivery(t *testing.T) {
 			}
 			s = newTestService(t, db, Options{Sender: s.sender})
 			task, err = s.Send(ctx, task.ID)
-			if err != nil || delivered != frozen || task.Message != frozen {
+			if err != nil || delivered != task.CopyText || task.Message != frozen {
 				t.Fatalf("delivery differs from published message: %+v %v", task, err)
 			}
 		})

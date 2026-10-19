@@ -130,15 +130,14 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 			if len(news) > 0 && news[0] != nil {
 				handler := &DailyNewsHandler{news: news[0], audit: auditLogService}
 				daily := protected.Group("/daily-news")
-				daily.Use(middleware.RequireAnyRole("admin", "editor"))
-				daily.GET("", handler.List)
-				daily.POST("/collect", handler.Collect)
-				daily.POST("/:date/items", handler.AppendItems)
+				daily.GET("", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:read", "daily_news:write", "daily_news:send"}), handler.List)
+				daily.POST("/collect", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.Collect)
+				daily.POST("/:date/items", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.AppendItems)
 				daily.POST("/:date/reset", middleware.RequireAnyRole("admin"), handler.Reset)
-				daily.POST("/:date/approve", handler.Action("approve"))
-				daily.POST("/:date/publish", handler.Action("publish"))
+				daily.POST("/:date/approve", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.Action("approve"))
+				daily.POST("/:date/publish", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.Action("publish"))
 				// Distribution is restricted to administrators.
-				daily.POST("/:date/send", middleware.RequireAnyRole("admin"), handler.Action("send"))
+				daily.POST("/:date/send", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"daily_news:send"}), handler.Action("send"))
 			}
 
 			protected.GET("/articles", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"articles:read", "articles:write"}), articleHandler.List)

@@ -34,14 +34,20 @@ type FeishuSender struct{}
 var _ Sender = (*FeishuSender)(nil)
 
 func (s *FeishuSender) Send(ctx context.Context, text, uuid string) (string, error) {
+	digest := DeliveryDigest{ReadingText: text, CopyText: text}
+	return s.SendDigest(ctx, digest, uuid)
+}
+
+func (s *FeishuSender) SendDigest(ctx context.Context, digest DeliveryDigest, uuid string) (string, error) {
 	if ctx == nil {
 		return "", errors.New("feishu: context is required")
 	}
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(text) == "" || !utf8.ValidString(text) {
-		return "", errors.New("feishu: valid non-empty text is required")
+	if strings.TrimSpace(digest.ReadingText) == "" || strings.TrimSpace(digest.CopyText) == "" ||
+		!utf8.ValidString(digest.ReadingText) || !utf8.ValidString(digest.CopyText) {
+		return "", errors.New("feishu: valid non-empty digest is required")
 	}
 	// Feishu accepts at most 50 characters; a byte limit also accepts standard UUIDs.
 	if strings.TrimSpace(uuid) == "" || len(uuid) > 50 || !utf8.ValidString(uuid) {
@@ -84,25 +90,39 @@ func (s *FeishuSender) Send(ctx context.Context, text, uuid string) (string, err
 		return "", errors.New("feishu: invalid authentication response")
 	}
 
-	// The API expects content to be a JSON-encoded string, not a nested object.
-	content, err := json.Marshal(struct {
-		Text string `json:"text"`
-	}{text})
+	postContent, err := buildFeishuPostContent(digest)
 	if err != nil {
-		return "", errors.New("feishu: cannot encode message")
+		return "", errors.New("feishu: cannot encode post message")
 	}
+	postID, err := s.sendMessage(ctx, client, auth.Token, chatID, "post", postContent, uuid+"-post")
+	if err != nil {
+		return "", err
+	}
+	textContent, err := json.Marshal(struct {
+		Text string `json:"text"`
+	}{digest.CopyText})
+	if err != nil {
+		return "", errors.New("feishu: cannot encode text message")
+	}
+	if _, err := s.sendMessage(ctx, client, auth.Token, chatID, "text", string(textContent), uuid+"-copy"); err != nil {
+		return "", err
+	}
+	return postID, nil
+}
+
+func (s *FeishuSender) sendMessage(ctx context.Context, client *http.Client, token, chatID, msgType, content, uuid string) (string, error) {
 	var result struct {
 		Code *int `json:"code"`
 		Data struct {
 			MessageID string `json:"message_id"`
 		} `json:"data"`
 	}
-	err = feishuPost(ctx, client, feishuMessagesURL, auth.Token, struct {
+	err := feishuPost(ctx, client, feishuMessagesURL, token, struct {
 		ReceiveID string `json:"receive_id"`
 		MsgType   string `json:"msg_type"`
 		Content   string `json:"content"`
 		UUID      string `json:"uuid"`
-	}{chatID, "text", string(content), uuid}, &result)
+	}{chatID, msgType, content, uuid}, &result)
 	if err != nil {
 		return "", err
 	}
@@ -113,6 +133,46 @@ func (s *FeishuSender) Send(ctx context.Context, text, uuid string) (string, err
 		return "", errors.New("feishu: missing message ID")
 	}
 	return result.Data.MessageID, nil
+}
+
+func buildFeishuPostContent(digest DeliveryDigest) (string, error) {
+	title := "VOIDLAB 每日资讯"
+	if strings.TrimSpace(digest.Date) != "" {
+		title = title + " | " + strings.TrimSpace(digest.Date)
+	}
+	rows := [][]map[string]string{
+		{{"tag": "text", "text": fmt.Sprintf("过去 24 小时 · %d 条资讯", digest.ItemCount)}},
+	}
+	if len(digest.Articles) == 0 {
+		rows = append(rows, []map[string]string{{"tag": "text", "text": "过去 24 小时暂无可分发的站内资讯。"}})
+	} else {
+		for index, article := range digest.Articles {
+			rows = append(rows, []map[string]string{
+				{"tag": "text", "text": fmt.Sprintf("%d. ", index+1)},
+				{"tag": "a", "text": article.Title, "href": article.URL},
+			})
+			if strings.TrimSpace(article.Summary) != "" {
+				rows = append(rows, []map[string]string{{"tag": "text", "text": article.Summary}})
+			}
+			rows = append(rows, []map[string]string{{"tag": "text", "text": article.URL}})
+			if strings.TrimSpace(article.SourceName) != "" {
+				rows = append(rows, []map[string]string{{"tag": "text", "text": "来源：" + article.SourceName}})
+			}
+			if strings.TrimSpace(article.OriginalURL) != "" {
+				rows = append(rows, []map[string]string{{"tag": "text", "text": "原文链接：" + article.OriginalURL}})
+			}
+		}
+	}
+	body, err := json.Marshal(map[string]any{
+		"zh_cn": map[string]any{
+			"title":   title,
+			"content": rows,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }
 
 func feishuPost(ctx context.Context, client *http.Client, endpoint, token string, payload, result any) error {

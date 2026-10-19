@@ -18,6 +18,7 @@ export interface DailyNewsTask {
   items: DailyNewsItem[];
   article_ids: number[];
   message: string;
+  copy_text?: string;
   message_id: string;
   last_error: string;
 }
@@ -38,6 +39,7 @@ function normalizeTask(task: DailyNewsTask): DailyNewsTask {
     items: task.items ?? [],
     article_ids: task.article_ids ?? [],
     message: task.message ?? "",
+    copy_text: task.copy_text ?? "",
     message_id: task.message_id ?? "",
     last_error: task.last_error ?? ""
   };

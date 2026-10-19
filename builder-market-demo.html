@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Builder Market Demo</title>
+    <style>
+      :root {
+        --bg: #0b0b10;
+        --surface: #0f1020;
+        --surface-2: #14162a;
+        --text: #e7e7ef;
+        --muted: #a0a4b8;
+        --border: rgba(255, 255, 255, 0.10);
+        --brand: #8b5cf6;
+        --brand-2: #a78bfa;
+        --ok: #34d399;
+        --radius: 16px;
+        --radius-sm: 10px;
+        --shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+        --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #fafafa;
+          --surface: #ffffff;
+          --surface-2: #f6f6ff;
+          --text: #111827;
+          --muted: #6b7280;
+          --border: rgba(17, 24, 39, 0.12);
+          --shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
+        }
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: var(--font);
+        color: var(--text);
+        background: radial-gradient(1200px 600px at 25% 10%, rgba(139, 92, 246, 0.15), transparent 60%),
+          radial-gradient(1000px 520px at 78% 26%, rgba(167, 139, 250, 0.12), transparent 55%),
+          var(--bg);
+        background-attachment: fixed;
+      }
+
+      a { color: inherit; text-decoration: none; }
+
+      .shell {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 18px 18px 48px;
+      }
+
+      /* Topbar */
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 12px 20px;
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--surface), transparent 15%);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        position: sticky;
+        top: 12px;
+        z-index: 100;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .brand .name { font-weight: 800; letter-spacing: -0.2px; font-size: 18px; }
+      .brand .tag {
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--surface-2), transparent 10%);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .nav { display: flex; gap: 8px; align-items: center; }
+      .nav-group { display: flex; gap: 4px; align-items: center; }
+      .nav-divider { width: 1px; height: 20px; background: var(--border); margin: 0 8px; }
+
+      .pill {
+        padding: 8px 14px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      
+      .pill:hover {
+        background: color-mix(in srgb, var(--surface-2), transparent 50%);
+        color: var(--text);
+      }
+
+      .pill.active {
+        border-color: color-mix(in srgb, var(--brand), var(--border) 40%);
+        background: color-mix(in srgb, var(--brand), transparent 84%);
+        color: color-mix(in srgb, var(--brand-2), white 20%);
+      }
+
+      .avatar-sm {
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        background: var(--brand);
+        color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: bold;
+      }
+
+      /* View containers */
+      .view-container { display: none; animation: fadeIn 0.3s ease; }
+      .view-container.active { display: block; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+      /* Carousel */
+      .carousel-container {
+        position: relative; width: 100%; height: 380px;
+        margin-top: 24px; margin-bottom: 24px;
+        border-radius: var(--radius); overflow: hidden;
+        background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
+      }
+      .carousel-track { display: flex; height: 100%; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); }
+      .carousel-slide { min-width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; position: relative; }
+      .carousel-slide .content { padding: 48px; display: flex; flex-direction: column; justify-content: center; z-index: 2; }
+      .carousel-slide .badge-tag {
+        display: inline-flex; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+        text-transform: uppercase; color: var(--brand); margin-bottom: 16px;
+      }
+      .carousel-slide h2 { font-size: 36px; font-weight: 800; margin: 0 0 16px; line-height: 1.2; letter-spacing: -0.5px; }
+      .carousel-slide p { font-size: 16px; color: var(--muted); line-height: 1.6; margin: 0 0 32px; max-width: 480px; }
+      .carousel-slide .actions { display: flex; gap: 12px; }
+      .carousel-slide .visual { position: relative; overflow: hidden; }
+      .carousel-slide .visual img {
+        width: 100%; height: 100%; object-fit: cover; opacity: 0.8;
+        mask-image: linear-gradient(to right, transparent, black 20%);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 20%);
+      }
+      .carousel-dots { position: absolute; bottom: 24px; left: 48px; display: flex; gap: 8px; z-index: 10; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--muted), transparent 50%); cursor: pointer; transition: all 0.3s ease; }
+      .dot.active { width: 24px; border-radius: 4px; background: var(--brand); }
+
+      /* Section Headers */
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin: 40px 0 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .section-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .section-header .more-link {
+        font-size: 14px;
+        color: var(--brand);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .section-header .more-link:hover {
+        text-decoration: underline;
+      }
+
+      /* Horizontal Scroll Grid (For Showcase) */
+      .h-scroll-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      /* Showcase Card (Works) */
+      .showcase-card {
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+      }
+      .showcase-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow);
+        border-color: color-mix(in srgb, var(--border), white 10%);
+      }
+      .showcase-cover {
+        width: 100%;
+        height: 180px;
+        background: var(--surface-2);
+        position: relative;
+      }
+      .showcase-cover img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .showcase-body {
+        padding: 20px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .showcase-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 8px;
+        letter-spacing: -0.2px;
+      }
+      .showcase-meta {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .showcase-author {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text);
+      }
+      .showcase-author-avatar {
+        width: 20px; height: 20px; border-radius: 50%; background: var(--brand);
+        display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white;
+      }
+      .showcase-stats {
+        display: flex;
+        gap: 12px;
+        margin-top: auto;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .stat-item {
+        display: flex; align-items: center; gap: 4px;
+      }
+
+      /* Compact Card (For Builders & Projects on Home) */
+      .compact-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+      .compact-card {
+        display: flex;
+        gap: 16px;
+        padding: 20px;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .compact-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow);
+      }
+      .compact-avatar {
+        width: 48px; height: 48px; border-radius: 12px; background: color-mix(in srgb, var(--brand), transparent 80%);
+        display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: var(--brand);
+      }
+      .compact-avatar.project { background: color-mix(in srgb, #f472b6, transparent 80%); color: #f472b6; }
+      .compact-body { flex: 1; }
+      .compact-title { font-size: 16px; font-weight: 650; margin: 0 0 6px; }
+      .compact-meta { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+      .compact-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+      .compact-tag { padding: 2px 8px; border-radius: 4px; background: color-mix(in srgb, var(--surface-2), transparent 0%); border: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+
+      /* Layout */
+      .page { display: grid; grid-template-columns: 260px 1fr; gap: 24px; }
+      .sidebar { padding-right: 12px; }
+      .section-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 24px 0 12px; }
+      .section-title:first-child { margin-top: 0; }
+      /* Chips & Status Toggles */
+      .chips { display: flex; flex-direction: column; gap: 6px; }
+      .chip {
+        padding: 10px 14px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500;
+        color: color-mix(in srgb, var(--text), var(--muted) 20%); cursor: pointer; transition: all 0.2s ease;
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .chip:hover { background: color-mix(in srgb, var(--surface), transparent 30%); }
+      .chip.active { color: var(--text); background: color-mix(in srgb, var(--surface), transparent 0%); border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+      .chip.active::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+      
+      .status-toggle {
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+        border-radius: 999px; border: 1px solid var(--border); background: color-mix(in srgb, var(--surface-2), transparent 50%);
+        font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      }
+      .status-toggle.active { border-color: color-mix(in srgb, var(--ok), transparent 50%); color: var(--ok); background: color-mix(in srgb, var(--ok), transparent 90%); }
+      .status-toggle.active .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+      .status-toggle .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: all 0.2s; }
+
+      .main { display: flex; flex-direction: column; gap: 20px; }
+
+      /* Toolbar & Search */
+      .toolbar {
+        display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: space-between;
+        padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+      }
+      .search {
+        flex: 1; min-width: 260px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+        background: color-mix(in srgb, var(--bg), transparent 50%); padding: 12px 16px; color: var(--text);
+        outline: none; font-size: 14px; transition: border-color 0.2s;
+      }
+      .search:focus { border-color: var(--brand); }
+      .search::placeholder { color: color-mix(in srgb, var(--muted), transparent 15%); }
+
+      /* List & Cards (For sub pages) */
+      .list { display: grid; gap: 16px; }
+      .card {
+        display: grid; grid-template-columns: auto 1fr auto; gap: 24px; padding: 24px;
+        border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: color-mix(in srgb, var(--border), white 10%); }
+      .card-avatar {
+        width: 64px; height: 64px; border-radius: 16px; background: color-mix(in srgb, var(--brand), transparent 80%);
+        display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: var(--brand);
+        border: 1px solid color-mix(in srgb, var(--brand), transparent 60%);
+      }
+      
+      .btn {
+        padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent;
+        color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s ease;
+      }
+      .btn:hover { background: var(--surface-2); }
+      .btn.primary { border-color: var(--brand); background: var(--brand); color: #fff; }
+      .btn.primary:hover { background: color-mix(in srgb, var(--brand), white 10%); }
+      .btn.danger-text { color: #f87171; border-color: transparent; }
+      .btn.danger-text:hover { background: color-mix(in srgb, #f87171, transparent 90%); }
+
+      /* Tracking Steps */
+      .track-steps { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--border); }
+      .step { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+      .step.done { color: var(--ok); }
+      .step.active { color: var(--brand); font-weight: 600; }
+      .step-icon { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid currentColor; font-size: 10px; }
+      .step.done .step-icon { background: var(--ok); color: #000; }
+      .step-line { flex: 1; height: 1px; background: var(--border); min-width: 20px; }
+
+      /* Forms */
+      .form-container { max-width: 680px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); padding: 40px; border-radius: var(--radius); box-shadow: var(--shadow); }
+      .form-header { margin-bottom: 32px; text-align: center; }
+      .form-header h2 { font-size: 28px; margin: 0 0 12px; letter-spacing: -0.5px; }
+      .form-header p { color: var(--muted); margin: 0; line-height: 1.5; }
+      .form-group { margin-bottom: 24px; }
+      .form-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: color-mix(in srgb, var(--text), transparent 10%); }
+      .form-control { width: 100%; background: color-mix(in srgb, var(--bg), transparent 50%); border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; color: var(--text); font-family: var(--font); font-size: 15px; transition: border-color 0.2s; }
+      .form-control:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand), transparent 80%); }
+      select.form-control { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23a0a4b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 6 8 10 12 6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+      textarea.form-control { resize: vertical; min-height: 120px; line-height: 1.6; }
+      .form-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); }
+
+      /* Modal / Dialog */
+      .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+        display: none; align-items: center; justify-content: center; z-index: 1000;
+        opacity: 0; transition: opacity 0.2s ease;
+      }
+      .modal-overlay.active { display: flex; opacity: 1; }
+      .modal {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); width: 100%; max-width: 520px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+        transform: translateY(20px); transition: transform 0.2s ease;
+      }
+      .modal-overlay.active .modal { transform: translateY(0); }
+      .modal-header { padding: 24px 32px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+      .modal-header h3 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.2px; }
+      .modal-close { cursor: pointer; color: var(--muted); font-size: 20px; line-height: 1; transition: color 0.2s; }
+      .modal-close:hover { color: var(--text); }
+      .modal-body { padding: 24px 32px; }
+      .modal-footer { padding: 16px 32px 24px; display: flex; justify-content: flex-end; gap: 12px; }
+      
+      .contact-card {
+        background: color-mix(in srgb, var(--surface-2), transparent 50%);
+        border: 1px dashed var(--brand); border-radius: 8px; padding: 16px; margin-top: 16px;
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .contact-info { display: flex; flex-direction: column; gap: 4px; }
+      .contact-label { font-size: 12px; color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+      .contact-value { font-size: 16px; font-family: monospace; letter-spacing: 0.5px; color: var(--text); }
+
+      /* Workspace Specific Styles */
+      .workspace-header {
+        display: grid; grid-template-columns: 1fr auto; gap: 24px;
+        padding: 32px; border-radius: var(--radius); border: 1px solid var(--border);
+        background: linear-gradient(135deg, color-mix(in srgb, var(--surface), transparent 0%), color-mix(in srgb, var(--surface-2), transparent 50%));
+        margin-top: 24px; margin-bottom: 24px;
+      }
+      .ws-profile { display: flex; gap: 24px; align-items: flex-start; }
+      .ws-avatar {
+        width: 88px; height: 88px; border-radius: 24px; background: var(--brand); color: white;
+        display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 800;
+        box-shadow: 0 8px 24px color-mix(in srgb, var(--brand), transparent 70%);
+      }
+      .ws-info h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
+      .ws-info h1 .status-dot { width: 10px; height: 10px; background: var(--ok); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--ok); }
+      .ws-info p { margin: 0 0 16px; color: var(--muted); font-size: 15px; max-width: 500px; line-height: 1.6; }
+      .ws-stats { display: flex; gap: 32px; padding-left: 32px; border-left: 1px solid var(--border); }
+      .ws-stat-item { display: flex; flex-direction: column; gap: 4px; }
+      .ws-stat-val { font-size: 28px; font-weight: 800; }
+      .ws-stat-lbl { font-size: 13px; color: var(--muted); }
+      .ws-body { display: flex; flex-direction: column; gap: 20px; }
+      
+      @media (max-width: 980px) {
+        .page { grid-template-columns: 1fr; }
+        .h-scroll-grid, .compact-grid { grid-template-columns: 1fr; }
+        .carousel-slide { grid-template-columns: 1fr; }
+        .carousel-slide .visual { display: none; }
+        .workspace-header { grid-template-columns: 1fr; }
+        .ws-stats { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="topbar">
+        <div class="brand">
+          <div class="name">VOIDLAB</div>
+          <div class="tag">Market</div>
+        </div>
+        <div class="nav" id="nav">
+          <div class="nav-group">
+            <div class="pill active" data-target="view-discover">发现广场</div>
+            <div class="pill" data-target="view-builders">找 Builder</div>
+            <div class="pill" data-target="view-projects">找 Project</div>
+          </div>
+          <div class="nav-divider"></div>
+          <div class="nav-group">
+            <div class="pill" data-target="view-post-demand" style="color: var(--text);">+ 发布需求</div>
+            <div class="pill" data-target="view-workspace">
+              <div class="avatar-sm">V</div> 我的工作台
+            </div>
+            <div class="pill" data-target="view-register" style="color: var(--brand); border-color: color-mix(in srgb, var(--brand), transparent 50%); background: color-mix(in srgb, var(--brand), transparent 90%);">注册 (邀请制)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 1: Discover (发现广场 - 聚焦展示) -->
+      <div id="view-discover" class="view-container active">
+        <!-- Carousel Hero Section -->
+        <div class="carousel-container">
+          <div class="carousel-track" id="carouselTrack">
+            <div class="carousel-slide">
+              <div class="content">
+                <div class="badge-tag">Featured Project</div>
+                <h2>寻找懂 MCP 的工程师，共建开放接口层</h2>
+                <p>这不是一个普通的开发外包，而是一个需要深度理解 Agent 与协议底层的共创项目。预算充足，支持完全远程协作。</p>
+                <div class="actions">
+                  <div class="btn primary">查看项目详情</div>
+                  <div class="btn">投递合作意向</div>
+                </div>
+              </div>
+              <div class="visual">
+                <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=2070&auto=format&fit=crop" alt="Code" />
+              </div>
+            </div>
+            <div class="carousel-slide">
+              <div class="content">
+                <div class="badge-tag" style="color: #60a5fa;">Top Builder</div>
+                <h2>Lena Xu · AI 产品设计师</h2>
+                <p>前上海人工智能实验室设计专家。擅长复杂 Agent 工作台与协作后台设计。目前开放 4 周内的短期项目顾问合作。</p>
+                <div class="actions">
+                  <div class="btn primary">查看能力证明</div>
+                  <div class="btn">发起协作请求</div>
+                </div>
+              </div>
+              <div class="visual">
+                <img src="https://images.unsplash.com/photo-1542744094-24638ea0bc40?q=80&w=2070&auto=format&fit=crop" alt="Design" />
+              </div>
+            </div>
+          </div>
+          <div class="carousel-dots" id="carouselDots">
+            <div class="dot active" data-index="0"></div>
+            <div class="dot" data-index="1"></div>
+          </div>
+        </div>
+
+        <!-- 用户上传的项目/作品展示区 -->
+        <div class="section-header">
+          <h3>🔥 社区项目展示 (Works Showcase)</h3>
+          <div class="more-link" onclick="document.querySelector('[data-target=\'view-projects\']').click()">查看全部作品 &rarr;</div>
+        </div>
+        <div class="h-scroll-grid">
+          <!-- Work Card 1 -->
+          <div class="showcase-card">
+            <div class="showcase-cover">
+              <img src="https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?q=80&w=800&auto=format&fit=crop" alt="System" />
+            </div>
+            <div class="showcase-body">
+              <div class="showcase-title">AI 资讯自动分发系统</div>
+              <div class="showcase-meta">
+                <div class="showcase-author">
+                  <div class="showcase-author-avatar">K</div> Ken Liu
+                </div>
+                <span>· 2 天前发布</span>
+              </div>
+              <div style="font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px;">展示了如何把采集、发布、封面生成和飞书发送串联成一个健壮的运营自动化管线。</div>
+              <div class="compact-tags">
+                <span class="compact-tag">自动化</span>
+                <span class="compact-tag">工作流</span>
+              </div>
+              <div class="showcase-stats">
+                <div class="stat-item">👍 128</div>
+                <div class="stat-item">💬 32</div>
+              </div>
+            </div>
+          </div>
+          <!-- Work Card 2 -->
+          <div class="showcase-card">
+            <div class="showcase-cover">
+              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop" alt="Data" />
+            </div>
+            <div class="showcase-body">
+              <div class="showcase-title">VoidLab Admin Console</div>
+              <div class="showcase-meta">
+                <div class="showcase-author">
+                  <div class="showcase-author-avatar">L</div> Lena Xu
+                </div>
+                <span>· 1 周前发布</span>
+              </div>
+              <div style="font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px;">基于 Vue3 的现代化后台模板，内建审批流、RBAC 和 Agent 交互面板。</div>
+              <div class="compact-tags">
+                <span class="compact-tag">Vue 3</span>
+                <span class="compact-tag">Design System</span>
+              </div>
+              <div class="showcase-stats">
+                <div class="stat-item">👍 86</div>
+                <div class="stat-item">💬 14</div>
+              </div>
+            </div>
+          </div>
+          <!-- Work Card 3 -->
+          <div class="showcase-card">
+            <div class="showcase-cover">
+              <img src="https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=800&auto=format&fit=crop" alt="Hardware" />
+            </div>
+            <div class="showcase-body">
+              <div class="showcase-title">音频硬件文案自动合成器</div>
+              <div class="showcase-meta">
+                <div class="showcase-author">
+                  <div class="showcase-author-avatar">V</div> Venson
+                </div>
+                <span>· 2 周前发布</span>
+              </div>
+              <div style="font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 12px;">解决 LDR2001 设备批量音频烧录痛点，通过 TTS API 自动合成并同步到硬件。</div>
+              <div class="compact-tags">
+                <span class="compact-tag">Hardware</span>
+                <span class="compact-tag">TTS</span>
+              </div>
+              <div class="showcase-stats">
+                <div class="stat-item">👍 245</div>
+                <div class="stat-item">💬 56</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 热门 Builder 与 机会 -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px;">
+          
+          <div>
+            <div class="section-header">
+              <h3>⭐️ 活跃 Builders</h3>
+              <div class="more-link" onclick="document.querySelector('[data-target=\'view-builders\']').click()">全部 Builder &rarr;</div>
+            </div>
+            <div class="compact-grid" style="grid-template-columns: 1fr;">
+              <div class="compact-card">
+                <div class="compact-avatar">L</div>
+                <div class="compact-body">
+                  <div class="compact-title">Lena Xu</div>
+                  <div class="compact-meta">AI 产品设计师 · 上海</div>
+                  <div class="compact-tags">
+                    <span class="compact-tag">Agent UX</span>
+                    <span class="compact-tag">顾问咨询</span>
+                  </div>
+                </div>
+              </div>
+              <div class="compact-card">
+                <div class="compact-avatar">K</div>
+                <div class="compact-body">
+                  <div class="compact-title">Ken Liu</div>
+                  <div class="compact-meta">内容增长与自动化 · 深圳</div>
+                  <div class="compact-tags">
+                    <span class="compact-tag">自动化系统</span>
+                    <span class="compact-tag">远程</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-header">
+              <h3>💼 紧急招募项目</h3>
+              <div class="more-link" onclick="document.querySelector('[data-target=\'view-projects\']').click()">全部项目 &rarr;</div>
+            </div>
+            <div class="compact-grid" style="grid-template-columns: 1fr;">
+              <div class="compact-card">
+                <div class="compact-avatar project">P</div>
+                <div class="compact-body">
+                  <div class="compact-title">跨境电商选品操盘手</div>
+                  <div class="compact-meta">招募：运营/营销 · 预算明确</div>
+                  <div class="compact-tags">
+                    <span class="compact-tag">跨境出海</span>
+                    <span class="compact-tag">TikTok</span>
+                  </div>
+                </div>
+              </div>
+              <div class="compact-card">
+                <div class="compact-avatar project">P</div>
+                <div class="compact-body">
+                  <div class="compact-title">AI 知识库前端研发</div>
+                  <div class="compact-meta">招募：前端开发 · 短期外包</div>
+                  <div class="compact-tags">
+                    <span class="compact-tag">Vue 3</span>
+                    <span class="compact-tag">Block Editor</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- VIEW 2: Builders (找人 - 列表筛选) -->
+      <div id="view-builders" class="view-container">
+        <div class="page" style="margin-top: 24px;">
+          <div class="panel sidebar">
+            <div class="section-title">角色类型</div>
+            <div class="chips">
+              <div class="chip active">全部角色</div>
+              <div class="chip">前端开发</div>
+              <div class="chip">后端/架构</div>
+              <div class="chip">AI 产品经理</div>
+              <div class="chip">运营/增长</div>
+            </div>
+            <div class="section-title">协作方式</div>
+            <div class="chips">
+              <div class="chip active">不限</div>
+              <div class="chip">远程共创</div>
+              <div class="chip">专家顾问</div>
+              <div class="chip">全职加入</div>
+            </div>
+            <div class="section-title">当前状态</div>
+            <div class="chips">
+              <div class="chip active">看机会中 (Open)</div>
+              <div class="chip">暂不接单</div>
+            </div>
+          </div>
+          <div class="panel main">
+            <div class="toolbar">
+              <div style="font-size: 18px; font-weight: 700;">找 Builder</div>
+              <input class="search" placeholder="搜索技能、人名或城市..." style="max-width: 300px;" />
+            </div>
+            <div class="list">
+              <div class="card">
+                <div class="card-avatar">L</div>
+                <div>
+                  <div class="title" style="display: flex; align-items: center; gap: 12px;">Lena Xu · AI 产品设计师 <span class="status-toggle active" style="padding: 2px 8px; font-size: 11px;"><span class="dot"></span>2周内有档期</span></div>
+                  <div class="meta">上海 / 远程 · 擅长复杂 Agent 工作台与协作后台</div>
+                  <div style="font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 16px;">前大厂设计专家。擅长把审批流、知识库、任务编排与运营动作做成清晰可操作的工作台。当前开放 4 周档期。</div>
+                  <div class="tags">
+                    <span class="tag">Agent UX</span>
+                    <span class="tag">Design System</span>
+                    <span class="tag">顾问咨询</span>
+                  </div>
+                </div>
+                <div class="cta" style="border-left: 1px solid var(--border); padding-left: 24px;">
+                  <div class="btn primary" onclick="openModal('apply-modal')">发起合作</div>
+                  <div class="btn">查看主页</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-avatar">K</div>
+                <div>
+                  <div class="title" style="display: flex; align-items: center; gap: 12px;">Ken Liu · 内容增长与自动化 <span class="status-toggle" style="padding: 2px 8px; font-size: 11px;"><span class="dot"></span>排期已满</span></div>
+                  <div class="meta">深圳 / 顾问制 · 擅长把内容系统做成可复用资产</div>
+                  <div style="font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 16px;">把大量旧稿拆成可复用单元，并形成主题地图与装配流程。帮助 3 家出海品牌完成内容基建。</div>
+                  <div class="tags">
+                    <span class="tag">增长系统</span>
+                    <span class="tag">内容资产</span>
+                    <span class="tag">远程</span>
+                  </div>
+                </div>
+                <div class="cta" style="border-left: 1px solid var(--border); padding-left: 24px;">
+                  <div class="btn primary" onclick="openModal('apply-modal')">发起合作</div>
+                  <div class="btn">查看主页</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: Projects (找项目 - 列表筛选) -->
+      <div id="view-projects" class="view-container">
+        <div class="page" style="margin-top: 24px;">
+          <div class="panel sidebar">
+            <div class="section-title">项目类型</div>
+            <div class="chips">
+              <div class="chip active">全部项目</div>
+              <div class="chip">独立开发合伙</div>
+              <div class="chip">短期外包</div>
+              <div class="chip">全职岗位</div>
+            </div>
+            <div class="section-title">阶段</div>
+            <div class="chips">
+              <div class="chip active">不限</div>
+              <div class="chip">想法成型</div>
+              <div class="chip">MVP 研发中</div>
+              <div class="chip">已上线找增长</div>
+            </div>
+          </div>
+          <div class="panel main">
+            <div class="toolbar">
+              <div style="font-size: 18px; font-weight: 700;">找 Project</div>
+              <input class="search" placeholder="搜索技术栈、领域..." style="max-width: 300px;" />
+            </div>
+            <div class="list">
+              <div class="card">
+                <div class="card-avatar" style="background: color-mix(in srgb, #f472b6, transparent 80%); color: #f472b6; border-color: color-mix(in srgb, #f472b6, transparent 60%);">P</div>
+                <div>
+                  <div class="title">寻找懂 MCP 的工程师，共建开放接口层</div>
+                  <div class="meta">4-6 周共创项目 · 远程协作 · 预算 ¥30k-50k</div>
+                  <div style="font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 16px;">目标不是只做页面，而是让用户自己的 Agent 能真正接入并触达。需要熟悉 Go / TS，对模型上下文协议有深刻理解。</div>
+                  <div class="tags">
+                    <span class="tag">API-first</span>
+                    <span class="tag">Go / TS</span>
+                    <span class="tag">短期外包</span>
+                  </div>
+                </div>
+                <div class="cta" style="border-left: 1px solid var(--border); padding-left: 24px;">
+                  <div class="btn primary" onclick="openModal('apply-modal')">申请合作</div>
+                  <div class="btn">看项目详情</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 5: Post Demand (发布需求) -->
+      <div id="view-post-demand" class="view-container">
+        <div class="page" style="margin-top: 40px; display: block;">
+          <div class="form-container">
+            <div class="form-header">
+              <h2>发布合作需求</h2>
+              <p>清晰的需求描述能帮你更快匹配到合适的 Builder</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">需求标题</label>
+              <input class="form-control" placeholder="例如：寻找懂 MCP 的前端工程师共建平台" />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+              <div class="form-group">
+                <label class="form-label">需求类型</label>
+                <select class="form-control">
+                  <option>短期外包</option>
+                  <option>独立开发合伙</option>
+                  <option>专家顾问</option>
+                  <option>全职加入</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">预算范围</label>
+                <input class="form-control" placeholder="例如：¥10k-20k 或 面议" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">期望角色 (标签)</label>
+              <input class="form-control" placeholder="输入技能或角色，如：Vue3, Agent UX，回车生成标签" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">详细描述</label>
+              <textarea class="form-control" placeholder="描述项目的背景、目标以及你希望对方承担的具体工作..."></textarea>
+            </div>
+            <div class="form-actions">
+              <div class="btn" onclick="document.querySelector('[data-target=\'view-discover\']').click()">取消</div>
+              <div class="btn primary" onclick="alert('需求已发布！'); document.querySelector('[data-target=\'view-discover\']').click()">发布到广场</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 6: Register (邀请制注册) -->
+      <div id="view-register" class="view-container">
+        <div class="page" style="margin-top: 40px; display: block;">
+          <div class="form-container" style="max-width: 480px;">
+            <div class="form-header">
+              <h2>Builder 邀请注册</h2>
+              <p>VOIDLAB 协作市场当前处于内测阶段，仅凭邀请码入驻。</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color: var(--brand);">邀请码 (Invitation Code) *</label>
+              <input class="form-control" placeholder="输入 8 位专属邀请码" style="letter-spacing: 2px; font-family: monospace; font-size: 18px; text-align: center; border-color: color-mix(in srgb, var(--brand), transparent 50%); background: color-mix(in srgb, var(--brand), transparent 90%);" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">真实姓名 / 常用昵称 *</label>
+              <input class="form-control" placeholder="你的称呼，将在网络中公开展示" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">核心职业身份 *</label>
+              <select class="form-control">
+                <option value="">请选择你的主要职业...</option>
+                <option>前端开发 (Frontend)</option>
+                <option>后端/架构 (Backend / Architecture)</option>
+                <option>AI 产品经理 (AI Product)</option>
+                <option>UI/UX 设计师 (Designer)</option>
+                <option>内容/运营增长 (Growth)</option>
+                <option>其他 (Other)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">一句话签名 (Headline)</label>
+              <input class="form-control" placeholder="例如：专注于高可用系统设计与容器化" />
+            </div>
+            <div class="form-actions" style="justify-content: center; margin-top: 32px; border-top: none; padding-top: 0;">
+              <div class="btn primary" style="width: 100%; padding: 14px; font-size: 16px;" onclick="alert('验证成功！欢迎加入 VOIDLAB'); document.querySelector('[data-target=\'view-workspace\']').click();">验证并完成注册</div>
+            </div>
+            <div style="text-align: center; margin-top: 24px; font-size: 13px; color: var(--muted);">
+              已有账号？ <span style="color: var(--brand); cursor: pointer;" onclick="alert('跳转到登录页')">直接登录</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 4: Workspace (My Profile & Assets) -->
+      <div id="view-workspace" class="view-container">
+        
+        <div class="workspace-header">
+          <div class="ws-profile">
+            <div class="ws-avatar">V</div>
+            <div class="ws-info">
+              <h1>Venson He 
+                <span class="status-toggle active" style="margin-left: 12px; font-size: 13px;" onclick="this.classList.toggle('active'); this.querySelector('span').innerText = this.classList.contains('active') ? '开放协作 (1周内)' : '暂不接单';">
+                  <span class="dot"></span><span style="display:inline;">开放协作 (1周内)</span>
+                </span>
+              </h1>
+              <p>全栈开发者 / AI 基础设施架构师。专注于高可用系统设计、容器化与 Agent 开放平台接入。当前可接短期架构咨询与远程共创项目。</p>
+              <div class="tags" style="margin-bottom: 16px;">
+                <span class="tag">Go / Python</span>
+                <span class="tag">Vue 3 / React</span>
+                <span class="tag">K8s / Docker</span>
+              </div>
+              <div class="actions" style="display: flex; gap: 10px;">
+                <div class="btn">编辑个人主页</div>
+                <div class="btn">Agent API Token</div>
+              </div>
+            </div>
+          </div>
+          <div class="ws-stats">
+            <div class="ws-stat-item">
+              <div class="ws-stat-val">3</div>
+              <div class="ws-stat-lbl">发布的项目</div>
+            </div>
+            <div class="ws-stat-item">
+              <div class="ws-stat-val">5</div>
+              <div class="ws-stat-lbl">公开的作品</div>
+            </div>
+            <div class="ws-stat-item">
+              <div class="ws-stat-val" style="color: var(--brand);">12</div>
+              <div class="ws-stat-lbl">收到的合作请求</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ws-body">
+          <div class="toolbar" style="padding: 8px 16px;">
+            <div class="tabs">
+              <div class="pill active">我发布的项目 (Projects)</div>
+              <div class="pill">我的能力证明 (Works)</div>
+              <div class="pill">合作请求管理</div>
+            </div>
+            <div class="btn primary" style="padding: 8px 14px;">+ 新建项目需求</div>
+          </div>
+
+          <div class="list">
+            <!-- Workspace Mock Item 1 -->
+            <div class="card">
+              <div class="card-avatar" style="background: color-mix(in srgb, #f472b6, transparent 80%); color: #f472b6; border-color: color-mix(in srgb, #f472b6, transparent 60%);">P</div>
+              <div>
+                <div class="badge project" style="margin-bottom: 8px;">Project</div>
+                <div class="title">开发一款 AI Native 知识库</div>
+                <div class="meta">发布于 2026-10-10 · 状态：招募中 · 已收到 4 份申请</div>
+                
+                <div class="track-steps">
+                  <div class="step done"><div class="step-icon">✓</div> 发布需求</div>
+                  <div class="step-line"></div>
+                  <div class="step active"><div class="step-icon">2</div> 收到申请 (4)</div>
+                  <div class="step-line" style="background: transparent; border-top: 1px dashed var(--border);"></div>
+                  <div class="step"><div class="step-icon">3</div> 确认合作</div>
+                </div>
+                
+              </div>
+              <div class="cta">
+                <div class="btn primary" onclick="openModal('view-request-modal')">处理新请求 (1)</div>
+                <div class="btn">查看全部候选人 (4)</div>
+                <div class="btn">编辑项目</div>
+              </div>
+            </div>
+
+            <!-- Workspace Mock Item 2 -->
+            <div class="card">
+              <div class="card-avatar" style="background: color-mix(in srgb, #f472b6, transparent 80%); color: #f472b6; border-color: color-mix(in srgb, #f472b6, transparent 60%);">P</div>
+              <div>
+                <div class="badge project" style="margin-bottom: 8px;">Project</div>
+                <div class="title">寻找德国市场跨境电商选品操盘手</div>
+                <div class="meta">发布于 2026-09-15 · 状态：已完成</div>
+                
+                <div class="track-steps">
+                  <div class="step done"><div class="step-icon">✓</div> 发布需求</div>
+                  <div class="step-line"></div>
+                  <div class="step done"><div class="step-icon">✓</div> 确认合作</div>
+                  <div class="step-line"></div>
+                  <div class="step done"><div class="step-icon">✓</div> 项目结案</div>
+                </div>
+
+              </div>
+              <div class="cta">
+                <div class="btn">查看结案报告</div>
+                <div class="btn danger-text">彻底删除</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Modals -->
+    <!-- 1. 发起联系请求 Modal -->
+    <div id="apply-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>发起合作请求</h3>
+          <div class="modal-close" onclick="closeModal('apply-modal')">&times;</div>
+        </div>
+        <div class="modal-body">
+          <p style="color: var(--muted); margin: 0 0 20px; line-height: 1.5;">对方同意请求后，双方即可交换微信或邮箱联系方式。请简要说明你的合作意向与优势。</p>
+          <div class="form-group">
+            <label class="form-label">请求留言 (最多 200 字)</label>
+            <textarea class="form-control" placeholder="Hi，我对你的项目很感兴趣。我是一名有 3 年经验的 Vue3 开发者，曾经做过类似 Notion 的块级编辑器，希望有机会聊聊细节..." style="min-height: 140px;"></textarea>
+          </div>
+          <div style="font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" checked style="accent-color: var(--brand);" /> 
+            <span>同时附上我的个人主页链接</span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="btn" onclick="closeModal('apply-modal')">取消</div>
+          <div class="btn primary" onclick="alert('请求已发送！请等待对方通过'); closeModal('apply-modal');">发送请求</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 查看并处理请求 Modal -->
+    <div id="view-request-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>处理合作请求</h3>
+          <div class="modal-close" onclick="closeModal('view-request-modal')">&times;</div>
+        </div>
+        <div class="modal-body">
+          <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px;">
+            <div class="avatar-sm" style="width: 40px; height: 40px; font-size: 16px; border-radius: 12px; background: color-mix(in srgb, var(--brand), transparent 60%);">J</div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px; margin-bottom: 4px;">Jason Lee <span style="font-size: 12px; color: var(--muted); font-weight: normal; margin-left: 8px;">刚刚发送</span></div>
+              <div style="font-size: 13px; color: var(--brand); cursor: pointer;">查看他的个人主页 &rarr;</div>
+            </div>
+          </div>
+          
+          <div style="background: color-mix(in srgb, var(--bg), transparent 50%); border: 1px solid var(--border); padding: 16px; border-radius: 8px; color: var(--text); font-size: 14px; line-height: 1.6;">
+            "Hi，我对你的『开发一款 AI Native 知识库』项目很感兴趣。我是一名有 3 年经验的 Vue3 开发者，曾经主导过类似 Notion 的块级编辑器研发，代码已在 GitHub 开源。希望有机会聊聊细节！"
+          </div>
+
+          <!-- 模拟同意后展示联系方式的状态 (默认隐藏，点击同意后通过 JS 展现) -->
+          <div id="contact-info-reveal" style="display: none;">
+            <div class="contact-card">
+              <div class="contact-info">
+                <div class="contact-label">微信号 (WeChat)</div>
+                <div class="contact-value">jason_dev_2026</div>
+              </div>
+              <div class="btn" style="padding: 6px 12px; font-size: 12px;">复制</div>
+            </div>
+            <div style="margin-top: 12px; font-size: 12px; color: var(--muted); text-align: center;">你已同意该请求，现在可以添加对方微信进行深入沟通了。</div>
+          </div>
+        </div>
+        <div class="modal-footer" id="request-actions">
+          <div class="btn danger-text" onclick="closeModal('view-request-modal')">婉拒</div>
+          <div class="btn primary" onclick="document.getElementById('contact-info-reveal').style.display='block'; document.getElementById('request-actions').style.display='none';">同意并交换联系方式</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // View Switcher Logic
+      const nav = document.getElementById("nav");
+      const views = document.querySelectorAll(".view-container");
+
+      nav.addEventListener("click", (e) => {
+        const el = e.target.closest(".pill[data-target]");
+        if (!el) return;
+        
+        // Update active nav pill
+        nav.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+        el.classList.add("active");
+
+        // Switch view container
+        const targetId = el.dataset.target;
+        views.forEach(v => {
+          if (v.id === targetId) {
+            v.classList.add("active");
+          } else {
+            v.classList.remove("active");
+          }
+        });
+      });
+
+      // Navigate from "More" links
+      document.querySelectorAll('.more-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          const target = e.target.getAttribute('onclick').match(/data-target=\\'([^']+)\\'/)[1];
+          const pill = document.querySelector(`.pill[data-target="${target}"]`);
+          if (pill) pill.click();
+        });
+      });
+
+      // Carousel Logic
+      const track = document.getElementById('carouselTrack');
+      const dots = document.querySelectorAll('.dot');
+      let currentSlide = 0;
+      const slideCount = 2;
+
+      function updateCarousel(index) {
+        currentSlide = index;
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+        dots.forEach(dot => dot.classList.remove('active'));
+        dots[currentSlide].classList.add('active');
+      }
+
+      dots.forEach(dot => {
+        dot.addEventListener('click', (e) => {
+          updateCarousel(parseInt(e.target.dataset.index));
+          resetInterval();
+        });
+      });
+
+      let carouselInterval = setInterval(() => {
+        updateCarousel((currentSlide + 1) % slideCount);
+      }, 5000);
+
+      function resetInterval() {
+        clearInterval(carouselInterval);
+        carouselInterval = setInterval(() => {
+          updateCarousel((currentSlide + 1) % slideCount);
+        }, 5000);
+      }
+
+      // Modal Logic
+      function openModal(id) {
+        document.getElementById(id).classList.add('active');
+        // Reset state for view-request-modal
+        if (id === 'view-request-modal') {
+          document.getElementById('contact-info-reveal').style.display = 'none';
+          document.getElementById('request-actions').style.display = 'flex';
+        }
+      }
+
+      function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+      }
+
+      // Close modal on click outside
+      document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            closeModal(overlay.id);
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
