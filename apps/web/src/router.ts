@@ -11,10 +11,19 @@ import CheckinPage from "../pages/checkin.vue";
 import KnowledgePage from "../pages/knowledge.vue";
 import KnowledgeSpacePage from "../pages/knowledge-space.vue";
 import KnowledgeEntryPage from "../pages/knowledge-entry.vue";
+import BuilderMarketPage from "../pages/market.vue";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    {
+      path: "/market",
+      component: BuilderMarketPage
+    },
+    {
+      path: "/market/:section",
+      component: BuilderMarketPage
+    },
     {
       path: "/",
       component: HomePage

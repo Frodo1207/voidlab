@@ -27,16 +27,19 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 	siteConfigRepo := repository.NewSiteConfigRepository(db)
 	auditLogRepo := repository.NewAuditLogRepository(db)
 	agentTokenRepo := repository.NewAgentTokenRepository(db)
+	builderNetworkAgentTokenRepo := repository.NewBuilderNetworkAgentTokenRepository(db)
 	knowledgeSpaceRepo := repository.NewKnowledgeSpaceRepository(db)
 	knowledgeEntryRepo := repository.NewKnowledgeEntryRepository(db)
 	knowledgeAccessTokenRepo := repository.NewKnowledgeAccessTokenRepository(db)
 	knowledgeAccessLogRepo := repository.NewKnowledgeAccessLogRepository(db)
 	knowledgeAssetRepo := repository.NewKnowledgeAssetRepository(db)
+	builderNetworkRepo := repository.NewBuilderNetworkRepository(db)
 
 	authService := service.NewAuthService(userRepo)
 	userService := service.NewUserService(userRepo)
 	agentTokenService := service.NewAgentTokenService(agentTokenRepo)
 	auditLogService := service.NewAuditLogService(auditLogRepo)
+	builderNetworkAgentTokenService := service.NewBuilderNetworkAgentTokenService(builderNetworkRepo, builderNetworkAgentTokenRepo)
 	knowledgeService := service.NewKnowledgeService(knowledgeSpaceRepo, knowledgeEntryRepo, knowledgeAccessTokenRepo, knowledgeAccessLogRepo)
 	dashboardService := service.NewDashboardService(articleRepo, eventRepo, builderRepo, leadRepo, auditLogRepo)
 	authHandler := NewAuthHandler(authService)
@@ -54,6 +57,8 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 	siteConfigHandler := NewSiteConfigHandler(service.NewSiteConfigService(siteConfigRepo), auditLogService)
 	auditLogHandler := NewAuditLogHandler(auditLogService)
 	dashboardHandler := NewDashboardHandler(dashboardService)
+	builderNetworkService := service.NewBuilderNetworkService(builderNetworkRepo)
+	builderNetworkHandler := NewBuilderNetworkHandler(builderNetworkService, builderNetworkAgentTokenService, auditLogService)
 	intakeHandler := NewIntakeHandler(
 		service.NewLeadService(leadRepo),
 		service.NewEventService(eventRepo),
@@ -87,6 +92,7 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 					"articles",
 					"events",
 					"builders",
+					"builder-network",
 					"media-assets",
 					"leads",
 					"knowledge-base",
@@ -97,6 +103,9 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 		auth := api.Group("/auth")
 		{
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/invitations/verify", builderNetworkHandler.VerifyInvite)
+			auth.POST("/register", builderNetworkHandler.Register)
+			auth.POST("/network/login", builderNetworkHandler.Login)
 			auth.GET("/me", middleware.RequireAuth(authService, agentTokenService), authHandler.Me)
 			auth.POST("/logout", middleware.RequireAuth(authService, agentTokenService), authHandler.Logout)
 		}
@@ -110,6 +119,15 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 			public.GET("/events/:slug", eventHandler.PublicDetail)
 			public.GET("/builders", builderHandler.PublicList)
 			public.GET("/builders/:slug", builderHandler.PublicDetail)
+			public.GET("/network/profiles", builderNetworkHandler.PublicProfiles)
+			public.GET("/network/profiles/:slug", builderNetworkHandler.PublicProfileDetail)
+			public.GET("/network/works", builderNetworkHandler.PublicWorks)
+			public.GET("/network/works/:slug", builderNetworkHandler.PublicWorkDetail)
+			public.GET("/network/opportunities", builderNetworkHandler.PublicOpportunities)
+			public.GET("/network/opportunities/:slug", builderNetworkHandler.PublicOpportunityDetail)
+			public.GET("/network/discovery/profiles", builderNetworkHandler.BrowsePublicProfiles)
+			public.GET("/network/discovery/works", builderNetworkHandler.BrowsePublicWorks)
+			public.GET("/network/discovery/opportunities", builderNetworkHandler.BrowsePublicOpportunities)
 			public.GET("/knowledge/spaces", knowledgeHandler.PublicListSpaces)
 			public.GET("/knowledge/spaces/:slug/toc", knowledgeHandler.PublicSpaceTOC)
 			public.POST("/knowledge/spaces/:slug/verify-token", knowledgeHandler.PublicVerifyToken)
@@ -122,6 +140,34 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 		api.POST("/events/:id/checkin", intakeHandler.EventCheckin)
 		api.POST("/builders/inquiry", intakeHandler.BuilderInquiry)
 
+		networkMembers := api.Group("/network")
+		networkMembers.Use(middleware.RequireNetworkAuth(builderNetworkService, builderNetworkAgentTokenService))
+		{
+			networkMembers.POST("/auth/logout", middleware.RequireNetworkSession(), builderNetworkHandler.Logout)
+			networkMembers.GET("/agent-tokens", middleware.RequireNetworkSession(), builderNetworkHandler.ListAgentTokens)
+			networkMembers.POST("/agent-tokens", middleware.RequireNetworkSession(), builderNetworkHandler.CreateAgentToken)
+			networkMembers.PUT("/agent-tokens/:id/status", middleware.RequireNetworkSession(), builderNetworkHandler.UpdateAgentTokenStatus)
+			networkMembers.GET("/me", middleware.RequireNetworkScopes("network_profiles:read"), builderNetworkHandler.Me)
+			networkMembers.PUT("/me", middleware.RequireNetworkScopes("network_profiles:write"), builderNetworkHandler.UpdateProfile)
+			networkMembers.GET("/me/contacts", middleware.RequireNetworkScopes("network_contact_exchange:read"), builderNetworkHandler.Contacts)
+			networkMembers.PUT("/me/contacts", middleware.RequireNetworkScopes("network_contact_exchange:write"), builderNetworkHandler.UpdateContacts)
+			networkMembers.GET("/works", middleware.RequireNetworkScopes("network_works:read"), builderNetworkHandler.MyWorks)
+			networkMembers.POST("/works", middleware.RequireNetworkScopes("network_works:write"), builderNetworkHandler.CreateWork)
+			networkMembers.PUT("/works/:id", middleware.RequireNetworkScopes("network_works:write"), builderNetworkHandler.UpdateWork)
+			networkMembers.GET("/opportunities", middleware.RequireNetworkScopes("network_opportunities:read"), builderNetworkHandler.MyOpportunities)
+			networkMembers.POST("/opportunities", middleware.RequireNetworkScopes("network_opportunities:write"), builderNetworkHandler.CreateOpportunity)
+			networkMembers.PUT("/opportunities/:id", middleware.RequireNetworkScopes("network_opportunities:write"), builderNetworkHandler.UpdateOpportunity)
+			networkMembers.POST("/contact-requests", middleware.RequireNetworkScopes("network_contact_requests:write"), builderNetworkHandler.CreateContactRequest)
+			networkMembers.GET("/contact-requests", middleware.RequireNetworkScopes("network_contact_requests:read"), builderNetworkHandler.ContactRequests)
+			networkMembers.POST("/contact-requests/:id/accept", middleware.RequireNetworkSession(), builderNetworkHandler.AcceptContactRequest)
+			networkMembers.POST("/contact-requests/:id/decline", middleware.RequireNetworkSession(), builderNetworkHandler.DeclineContactRequest)
+			networkMembers.POST("/contact-requests/:id/withdraw", middleware.RequireNetworkScopes("network_contact_requests:write"), builderNetworkHandler.WithdrawContactRequest)
+			networkMembers.PUT("/contact-requests/:id/progress", middleware.RequireNetworkScopes("network_contact_requests:write"), builderNetworkHandler.UpdateContactRequestProgress)
+			networkMembers.GET("/contact-requests/:id/contacts", middleware.RequireNetworkScopes("network_contact_exchange:read"), builderNetworkHandler.ContactExchange)
+			networkMembers.GET("/contact-exchanges/:id", middleware.RequireNetworkScopes("network_contact_exchange:read"), builderNetworkHandler.ContactExchange)
+			networkMembers.POST("/contact-exchanges/:id/revoke", middleware.RequireNetworkScopes("network_contact_exchange:write"), builderNetworkHandler.RevokeContactExchange)
+		}
+
 		protected := api.Group("/")
 		protected.Use(middleware.RequireAuth(authService, agentTokenService))
 		{
@@ -133,6 +179,7 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 				daily.GET("", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:read", "daily_news:write", "daily_news:send"}), handler.List)
 				daily.POST("/collect", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.Collect)
 				daily.POST("/:date/items", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.AppendItems)
+				daily.POST("/:date/runner-report", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.UpdateRunnerReport)
 				daily.POST("/:date/reset", middleware.RequireAnyRole("admin"), handler.Reset)
 				daily.POST("/:date/approve", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.Action("approve"))
 				daily.POST("/:date/publish", middleware.RequireRolesOrScopes([]string{"admin", "editor"}, []string{"daily_news:write"}), handler.Action("publish"))
@@ -187,6 +234,10 @@ func NewRouter(cfg config.Config, db *sql.DB, news ...*dailynews.Service) *gin.E
 			protected.GET("/knowledge/access-tokens", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"knowledge_tokens:read", "knowledge_tokens:write"}), knowledgeHandler.ListAccessTokens)
 			protected.POST("/knowledge/access-tokens", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"knowledge_tokens:write"}), knowledgeHandler.CreateAccessToken)
 			protected.PUT("/knowledge/access-tokens/:id/status", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"knowledge_tokens:write"}), knowledgeHandler.UpdateAccessTokenStatus)
+
+			protected.GET("/network/invitations", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"network_invitations:read", "network_invitations:write"}), builderNetworkHandler.ListInvites)
+			protected.POST("/network/invitations", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"network_invitations:write"}), builderNetworkHandler.CreateInvite)
+			protected.PUT("/network/invitations/:id/status", middleware.RequireRolesOrScopes([]string{"admin"}, []string{"network_invitations:write"}), builderNetworkHandler.UpdateInviteStatus)
 
 			leadOperations := protected.Group("/")
 			leadOperations.Use(middleware.RequireRolesOrScopes([]string{"admin", "ops"}, []string{"leads:read", "leads:write"}))

@@ -29,19 +29,19 @@ func recordAuditLog(
 	entityID *int64,
 	entityLabel string,
 	detail any,
-) {
+) error {
 	_ = actor
 
 	if auditLogService == nil {
-		return
+		return nil
 	}
 
 	currentActor, ok := middleware.CurrentActor(ctx)
 	if !ok {
-		return
+		return nil
 	}
 
-	_ = auditLogService.Record(service.AuditLogInput{
+	return auditLogService.Record(service.AuditLogInput{
 		ActorType:     currentActor.Type,
 		ActorID:       currentActor.ID,
 		ActorUsername: currentActor.Username,
@@ -53,6 +53,20 @@ func recordAuditLog(
 		EntityLabel:   entityLabel,
 		Detail:        detail,
 	})
+}
+
+func recordNetworkAudit(
+	ctx *gin.Context,
+	auditLogService *service.AuditLogService,
+	action string,
+	entityType string,
+	entityID *int64,
+	entityLabel string,
+	detail any,
+) {
+	if err := recordAuditLog(ctx, auditLogService, domain.User{}, action, entityType, entityID, entityLabel, detail); err != nil {
+		ctx.Error(err)
+	}
 }
 
 func toInt64Pointer(value int64) *int64 {

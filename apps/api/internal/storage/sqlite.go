@@ -350,6 +350,11 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate knowledge access pass schema: %w", err)
 	}
 
+	if err := migrateBuilderNetworkSchema(db); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("migrate builder network schema: %w", err)
+	}
+
 	if err := seedDefaultUsers(db); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("seed default users: %w", err)
@@ -371,6 +376,250 @@ func OpenSQLite(databasePath string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func migrateBuilderNetworkSchema(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS network_accounts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			email TEXT NOT NULL UNIQUE,
+			password_hash TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'active',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS network_sessions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			account_id INTEGER NOT NULL REFERENCES network_accounts(id) ON DELETE CASCADE,
+			token_hash TEXT NOT NULL UNIQUE,
+			expires_at DATETIME NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_sessions_account ON network_sessions(account_id);
+
+		CREATE TABLE IF NOT EXISTS network_invite_codes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			code_hash TEXT NOT NULL UNIQUE,
+			max_uses INTEGER NOT NULL DEFAULT 1,
+			used_count INTEGER NOT NULL DEFAULT 0,
+			expires_at DATETIME,
+			status TEXT NOT NULL DEFAULT 'active',
+			created_by INTEGER NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS network_profiles (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			account_id INTEGER NOT NULL UNIQUE REFERENCES network_accounts(id) ON DELETE CASCADE,
+			slug TEXT NOT NULL UNIQUE,
+			display_name TEXT NOT NULL,
+			primary_role TEXT NOT NULL,
+			headline TEXT NOT NULL DEFAULT '',
+			bio TEXT NOT NULL DEFAULT '',
+			city TEXT NOT NULL DEFAULT '',
+			skills_json TEXT NOT NULL DEFAULT '[]',
+			collaboration_modes_json TEXT NOT NULL DEFAULT '[]',
+			availability TEXT NOT NULL DEFAULT 'open',
+			available_from TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'published',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_profiles_status ON network_profiles(status, availability);
+
+		CREATE TABLE IF NOT EXISTS network_agent_tokens (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			profile_id INTEGER NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			token_hash TEXT NOT NULL UNIQUE,
+			scopes_json TEXT NOT NULL DEFAULT '[]',
+			is_active INTEGER NOT NULL DEFAULT 1,
+			last_used_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_agent_tokens_profile ON network_agent_tokens(profile_id, is_active);
+
+		CREATE TABLE IF NOT EXISTS network_private_contacts (
+			profile_id INTEGER PRIMARY KEY REFERENCES network_profiles(id) ON DELETE CASCADE,
+			email TEXT NOT NULL DEFAULT '',
+			wechat TEXT NOT NULL DEFAULT '',
+			phone TEXT NOT NULL DEFAULT '',
+			share_email INTEGER NOT NULL DEFAULT 0,
+			share_wechat INTEGER NOT NULL DEFAULT 0,
+			share_phone INTEGER NOT NULL DEFAULT 0,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS network_works (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			profile_id INTEGER NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE,
+			slug TEXT NOT NULL UNIQUE,
+			title TEXT NOT NULL,
+			summary TEXT NOT NULL DEFAULT '',
+			body TEXT NOT NULL DEFAULT '',
+			cover_url TEXT NOT NULL DEFAULT '',
+			demo_url TEXT NOT NULL DEFAULT '',
+			repo_url TEXT NOT NULL DEFAULT '',
+			tags_json TEXT NOT NULL DEFAULT '[]',
+			status TEXT NOT NULL DEFAULT 'published',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_works_profile ON network_works(profile_id, status);
+
+		CREATE TABLE IF NOT EXISTS network_work_members (
+			work_id INTEGER NOT NULL REFERENCES network_works(id) ON DELETE CASCADE,
+			profile_id INTEGER NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE,
+			role TEXT NOT NULL DEFAULT '',
+			contribution TEXT NOT NULL DEFAULT '',
+			sort_order INTEGER NOT NULL DEFAULT 0,
+			is_owner INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY(work_id, profile_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_work_members_profile ON network_work_members(profile_id, work_id);
+
+		CREATE TABLE IF NOT EXISTS network_opportunities (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			profile_id INTEGER NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE,
+			slug TEXT NOT NULL UNIQUE,
+			title TEXT NOT NULL,
+			summary TEXT NOT NULL DEFAULT '',
+			opportunity_type TEXT NOT NULL,
+			looking_for_roles_json TEXT NOT NULL DEFAULT '[]',
+			required_skills_json TEXT NOT NULL DEFAULT '[]',
+			engagement_mode TEXT NOT NULL DEFAULT '',
+			budget_hint TEXT NOT NULL DEFAULT '',
+			duration_hint TEXT NOT NULL DEFAULT '',
+			city_scope TEXT NOT NULL DEFAULT '',
+			remote_allowed INTEGER NOT NULL DEFAULT 1,
+			status TEXT NOT NULL DEFAULT 'open',
+			expires_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_opportunities_status ON network_opportunities(status, created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_network_opportunities_profile ON network_opportunities(profile_id, status);
+
+		CREATE TABLE IF NOT EXISTS network_contact_requests (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			from_profile_id INTEGER NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE,
+			target_type TEXT NOT NULL CHECK(target_type IN ('profile', 'opportunity')),
+			target_id INTEGER NOT NULL,
+			target_profile_id INTEGER NOT NULL REFERENCES network_profiles(id) ON DELETE CASCADE,
+			message TEXT NOT NULL,
+			related_work_ids_json TEXT NOT NULL DEFAULT '[]',
+			share_email INTEGER NOT NULL DEFAULT 0,
+			share_wechat INTEGER NOT NULL DEFAULT 0,
+			share_phone INTEGER NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'pending',
+			progress_status TEXT NOT NULL DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE INDEX IF NOT EXISTS idx_network_requests_target ON network_contact_requests(target_profile_id, status, created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_network_requests_sender ON network_contact_requests(from_profile_id, status, created_at DESC);
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_network_requests_pending_unique
+			ON network_contact_requests(from_profile_id, target_type, target_id) WHERE status = 'pending';
+
+		CREATE TABLE IF NOT EXISTS network_contact_exchanges (
+			request_id INTEGER PRIMARY KEY REFERENCES network_contact_requests(id) ON DELETE CASCADE,
+			accepted_by_profile_id INTEGER NOT NULL REFERENCES network_profiles(id),
+			applicant_share_email INTEGER NOT NULL DEFAULT 0,
+			applicant_share_wechat INTEGER NOT NULL DEFAULT 0,
+			applicant_share_phone INTEGER NOT NULL DEFAULT 0,
+			recipient_share_email INTEGER NOT NULL DEFAULT 0,
+			recipient_share_wechat INTEGER NOT NULL DEFAULT 0,
+			recipient_share_phone INTEGER NOT NULL DEFAULT 0,
+			revealed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			revoked_at DATETIME
+		);
+	`)
+	if err != nil {
+		return err
+	}
+	if err := ensureNetworkContactRequestProgressColumn(db); err != nil {
+		return err
+	}
+	return ensureNetworkContactExchangeConsentColumns(db)
+}
+
+func ensureNetworkContactRequestProgressColumn(db *sql.DB) error {
+	rows, err := db.Query(`PRAGMA table_info(network_contact_requests)`)
+	if err != nil {
+		return err
+	}
+	hasProgressStatus := false
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, columnType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if name == "progress_status" {
+			hasProgressStatus = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if hasProgressStatus {
+		return nil
+	}
+	_, err = db.Exec(`ALTER TABLE network_contact_requests ADD COLUMN progress_status TEXT NOT NULL DEFAULT ''`)
+	return err
+}
+
+func ensureNetworkContactExchangeConsentColumns(db *sql.DB) error {
+	columns := []string{
+		"applicant_share_email",
+		"applicant_share_wechat",
+		"applicant_share_phone",
+		"recipient_share_email",
+		"recipient_share_wechat",
+		"recipient_share_phone",
+	}
+	for _, column := range columns {
+		rows, err := db.Query(`PRAGMA table_info(network_contact_exchanges)`)
+		if err != nil {
+			return err
+		}
+		found := false
+		for rows.Next() {
+			var cid, notNull, primaryKey int
+			var name, columnType string
+			var defaultValue sql.NullString
+			if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+				_ = rows.Close()
+				return err
+			}
+			if name == column {
+				found = true
+			}
+		}
+		if err := rows.Err(); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if err := rows.Close(); err != nil {
+			return err
+		}
+		if found {
+			continue
+		}
+		if _, err := db.Exec(`ALTER TABLE network_contact_exchanges ADD COLUMN ` + column + ` INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func seedDefaultUsers(db *sql.DB) error {

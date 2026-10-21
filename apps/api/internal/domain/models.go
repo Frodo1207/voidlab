@@ -106,6 +106,164 @@ type Builder struct {
 	UpdatedAt          string   `json:"updated_at"`
 }
 
+type NetworkSession struct {
+	Token   string         `json:"token"`
+	Account NetworkAccount `json:"account"`
+	Profile NetworkProfile `json:"profile"`
+}
+
+type NetworkAgentToken struct {
+	ID         int64    `json:"id"`
+	ProfileID  int64    `json:"profile_id"`
+	Name       string   `json:"name"`
+	Scopes     []string `json:"scopes"`
+	IsActive   bool     `json:"is_active"`
+	LastUsedAt string   `json:"last_used_at"`
+	CreatedAt  string   `json:"created_at"`
+	UpdatedAt  string   `json:"updated_at"`
+}
+
+type NetworkAgentPrincipal struct {
+	Account NetworkAccount
+	Token   NetworkAgentToken
+}
+
+type NetworkAccount struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
+type NetworkInviteCode struct {
+	ID        int64  `json:"id"`
+	MaxUses   int    `json:"max_uses"`
+	UsedCount int    `json:"used_count"`
+	ExpiresAt string `json:"expires_at"`
+	Status    string `json:"status"`
+	CreatedBy int64  `json:"created_by"`
+	CreatedAt string `json:"created_at"`
+}
+
+type NetworkProfile struct {
+	ID            int64    `json:"id"`
+	AccountID     int64    `json:"account_id,omitempty"`
+	Slug          string   `json:"slug"`
+	DisplayName   string   `json:"display_name"`
+	PrimaryRole   string   `json:"primary_role"`
+	Headline      string   `json:"headline"`
+	Bio           string   `json:"bio"`
+	City          string   `json:"city"`
+	Skills        []string `json:"skills"`
+	Collaboration []string `json:"collaboration_modes"`
+	Availability  string   `json:"availability"`
+	AvailableFrom string   `json:"available_from"`
+	Email         string   `json:"email,omitempty"`
+	WeChat        string   `json:"wechat,omitempty"`
+	Phone         string   `json:"phone,omitempty"`
+	CreatedAt     string   `json:"created_at"`
+	UpdatedAt     string   `json:"updated_at"`
+}
+
+type NetworkWork struct {
+	ID         int64               `json:"id"`
+	ProfileID  int64               `json:"profile_id"`
+	Slug       string              `json:"slug"`
+	Title      string              `json:"title"`
+	Summary    string              `json:"summary"`
+	Body       string              `json:"body"`
+	CoverURL   string              `json:"cover_url"`
+	DemoURL    string              `json:"demo_url"`
+	RepoURL    string              `json:"repo_url"`
+	Tags       []string            `json:"tags"`
+	Status     string              `json:"status"`
+	CreatedAt  string              `json:"created_at"`
+	UpdatedAt  string              `json:"updated_at"`
+	AuthorName string              `json:"author_name,omitempty"`
+	Members    []NetworkWorkMember `json:"members,omitempty"`
+}
+
+type NetworkWorkMember struct {
+	ProfileID    int64  `json:"profile_id"`
+	DisplayName  string `json:"display_name,omitempty"`
+	Role         string `json:"role"`
+	Contribution string `json:"contribution"`
+	SortOrder    int    `json:"sort_order"`
+	IsOwner      bool   `json:"is_owner"`
+}
+
+type NetworkDiscoveryQuery struct {
+	Query        string
+	Role         string
+	Skill        string
+	City         string
+	Availability string
+	Type         string
+	Remote       *bool
+	Page         int
+	PageSize     int
+}
+
+type NetworkPage[T any] struct {
+	Items    []T `json:"items"`
+	Total    int `json:"total"`
+	Page     int `json:"page"`
+	PageSize int `json:"page_size"`
+}
+
+type NetworkOpportunity struct {
+	ID              int64    `json:"id"`
+	ProfileID       int64    `json:"profile_id"`
+	Slug            string   `json:"slug"`
+	Title           string   `json:"title"`
+	Summary         string   `json:"summary"`
+	OpportunityType string   `json:"opportunity_type"`
+	LookingFor      []string `json:"looking_for_roles"`
+	RequiredSkills  []string `json:"required_skills"`
+	EngagementMode  string   `json:"engagement_mode"`
+	BudgetHint      string   `json:"budget_hint"`
+	DurationHint    string   `json:"duration_hint"`
+	CityScope       string   `json:"city_scope"`
+	RemoteAllowed   bool     `json:"remote_allowed"`
+	Status          string   `json:"status"`
+	ExpiresAt       string   `json:"expires_at"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
+	OwnerName       string   `json:"owner_name,omitempty"`
+}
+
+type NetworkContactRequest struct {
+	ID              int64   `json:"id"`
+	FromProfileID   int64   `json:"from_profile_id"`
+	TargetType      string  `json:"target_type"`
+	TargetID        int64   `json:"target_id"`
+	Message         string  `json:"message"`
+	RelatedWorkIDs  []int64 `json:"related_work_ids"`
+	ShareEmail      bool    `json:"share_email"`
+	ShareWeChat     bool    `json:"share_wechat"`
+	SharePhone      bool    `json:"share_phone"`
+	Status          string  `json:"status"`
+	ProgressStatus  string  `json:"progress_status"`
+	ExchangeRevoked bool    `json:"exchange_revoked"`
+	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
+	ApplicantName   string  `json:"applicant_name,omitempty"`
+	ApplicantRole   string  `json:"applicant_role,omitempty"`
+}
+
+type NetworkContactExchange struct {
+	RequestID  int64                 `json:"request_id"`
+	Applicant  NetworkContactDetails `json:"applicant"`
+	Recipient  NetworkContactDetails `json:"recipient"`
+	RevealedAt string                `json:"revealed_at"`
+}
+
+type NetworkContactDetails struct {
+	Email  string `json:"email,omitempty"`
+	WeChat string `json:"wechat,omitempty"`
+	Phone  string `json:"phone,omitempty"`
+}
+
 type MediaAsset struct {
 	ID            int64  `json:"id"`
 	FileName      string `json:"file_name"`

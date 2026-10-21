@@ -32,6 +32,8 @@ const scopeOptions: { value: AgentScope; label: string; description: string }[] 
   { value: "knowledge:write", label: "知识库写入", description: "创建、更新知识空间、文档和资源" },
   { value: "knowledge_tokens:read", label: "知识令牌读取", description: "读取知识库 Space 访问令牌列表" },
   { value: "knowledge_tokens:write", label: "知识令牌写入", description: "创建、启停知识库 Space 访问令牌" },
+  { value: "network_invitations:read", label: "市场邀请码读取", description: "读取 BuilderNetwork 邀请码状态与使用情况" },
+  { value: "network_invitations:write", label: "市场邀请码管理", description: "创建、停用 BuilderNetwork 用户注册邀请码" },
   { value: "media:read", label: "媒体读取", description: "读取媒体资源库" },
   { value: "media:write", label: "媒体上传", description: "上传媒体资源" }
 ];

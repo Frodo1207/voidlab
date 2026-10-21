@@ -1,6 +1,6 @@
 ---
 name: "voidlab-ops-agent"
-description: "Connects an agent to the VOIDLAB admin API with agent-token auth and scope checks. Invoke when an agent needs to verify access or operate the VOIDLAB backend safely."
+description: "Connects an agent to the VOIDLAB admin API with scoped tokens. Invoke for VOIDLAB operations, including issuing BuilderNetwork registration invitations to users."
 ---
 
 # VOIDLAB Ops Agent
@@ -17,6 +17,7 @@ Read these reference files as needed:
 - `references/articles.md`
 - `references/events.md`
 - `references/builders.md`
+- `references/buildernetwork-invitations.md`
 - `references/media.md`
 - `references/publishing-flow.md`
 - `references/error-handling.md`
@@ -43,6 +44,7 @@ It standardizes:
 - how to read a protected knowledge entry through a short-lived grant
 - how Markdown knowledge assets are referenced and resolved
 - how to create, list, and rotate knowledge Space access tokens through dedicated agent scopes
+- how to issue BuilderNetwork registration invitations without accessing member-owned Agent Tokens
 - how to import a local Markdown file into a knowledge entry draft payload
 
 ## Required Environment
@@ -127,6 +129,8 @@ Supported scopes in the backend:
 - `knowledge:write`
 - `knowledge_tokens:read`
 - `knowledge_tokens:write`
+- `network_invitations:read`
+- `network_invitations:write`
 - `media:read`
 - `media:write`
 
@@ -140,6 +144,7 @@ Current limitation:
 
 - knowledge-space admin routes are now available to agent tokens that carry `knowledge:read` or `knowledge:write`
 - knowledge access token management is available only to agent tokens that carry `knowledge_tokens:read` or `knowledge_tokens:write`
+- BuilderNetwork invitation management is available to admin agent tokens with `network_invitations:read` or `network_invitations:write`
 - agent tokens can operate articles, events, builders, media, knowledge content, and Space access tokens when they have the matching dedicated scopes
 
 ## Resource Endpoints
@@ -185,6 +190,10 @@ Agent-accessible content endpoints:
 - Media
   - `GET /api/v1/media`
   - `POST /api/v1/media/upload`
+- BuilderNetwork invitations
+  - `GET /api/v1/network/invitations`
+  - `POST /api/v1/network/invitations`
+  - `PUT /api/v1/network/invitations/:id/status`
 
 Public knowledge endpoints use a different access model and do not use the agent token:
 
@@ -202,6 +211,8 @@ Admin-only endpoints are not available to agent tokens:
 - `GET /api/v1/audit-logs`
 - all lead operations under `/api/v1/leads`
 - dashboard and other admin-only groups that require human roles
+
+BuilderNetwork invitations are the limited exception: an admin agent token may manage them only with the dedicated `network_invitations:*` scopes. This does not grant access to other admin settings.
 
 ## Knowledge Workflow
 

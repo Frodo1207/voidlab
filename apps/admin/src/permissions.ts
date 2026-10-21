@@ -10,6 +10,7 @@ export const menuItems: MenuItem[] = [
   { index: "/", label: "仪表盘", roles: ["admin", "editor", "ops"] },
   { index: "/users", label: "用户管理", roles: ["admin"] },
   { index: "/agent-tokens", label: "Agent Tokens", roles: ["admin"] },
+  { index: "/builder-network/invitations", label: "BuilderNetwork 邀请码", roles: ["admin"] },
   { index: "/articles", label: "资讯管理", roles: ["admin", "editor"] },
   { index: "/daily-news", label: "每日资讯", roles: ["admin", "editor"] },
   { index: "/events", label: "活动管理", roles: ["admin", "editor"] },

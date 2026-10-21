@@ -4,6 +4,7 @@ import LoginView from "../views/login/LoginView.vue";
 import DashboardView from "../views/dashboard/DashboardView.vue";
 import UserListView from "../views/users/UserListView.vue";
 import AgentTokenListView from "../views/agent-tokens/AgentTokenListView.vue";
+import InvitationCodeListView from "../views/builder-network/InvitationCodeListView.vue";
 import ArticleListView from "../views/articles/ArticleListView.vue";
 import ArticleEditorView from "../views/articles/ArticleEditorView.vue";
 import DailyNewsListView from "../views/daily-news/DailyNewsListView.vue";
@@ -55,6 +56,12 @@ const router = createRouter({
           name: "agent-tokens",
           component: AgentTokenListView,
           meta: { title: "Agent Tokens", roles: ["admin"] }
+        },
+        {
+          path: "builder-network/invitations",
+          name: "builder-network-invitations",
+          component: InvitationCodeListView,
+          meta: { title: "BuilderNetwork 邀请码", roles: ["admin"] }
         },
         {
           path: "articles",

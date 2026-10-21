@@ -553,7 +553,9 @@ BuilderNetwork 必须遵循现有 VOIDLAB 架构原则：
 - `POST /api/v1/network/contact-requests`
 - `POST /api/v1/network/contact-requests/:id/accept`
 - `POST /api/v1/network/contact-requests/:id/decline`
+- `PUT /api/v1/network/contact-requests/:id/progress`
 - `GET /api/v1/network/contact-exchanges/:request_id`
+- `POST /api/v1/network/contact-exchanges/:request_id/revoke`
 
 ### 12.2 典型 Agent 接口
 
@@ -578,6 +580,10 @@ BuilderNetwork 必须遵循现有 VOIDLAB 架构原则：
 - 创建联系申请
 - 接受或婉拒申请（需用户明确授权）
 - 读取联系方式交换结果（仅限已接受且双方授权）
+- 撤回联系方式交换授权
+
+接受或婉拒申请仅允许用户本人通过市场会话确认；任一交换参与方可撤回授权，撤回后双方均无法继续读取该次联系方式。
+`network_contact_exchange:read/write` 同时约束本人私密联系方式的读取、更新与授权开关，Profile scope 不授予私密联系方式访问权。
 
 ## 13. 数据模型建议
 
@@ -611,10 +617,12 @@ BuilderNetwork 必须遵循现有 VOIDLAB 架构原则：
 
 默认连接流程：
 
-1. 申请者提交申请理由、可选作品及联系方式交换授权。
+1. 申请者提交申请理由、可选作品及逐字段联系方式交换授权；全局分享设置只作为本次授权的上限。
 2. 接收方查看公开资料与申请内容，再接受或婉拒。
-3. 接受后，服务端按双方授权展示联系方式。
+3. 接受时服务端固化双方当前授权字段；读取结果不得超出申请人本次勾选和接收方当时的分享设置。
 4. 私密联系方式在此前不可读取；接受申请不代表达成合作。
+
+任一方关闭某个全局联系方式分享设置时，该字段在既有交换中的授权也会被撤销；重新开启设置不恢复旧交换，需通过新的申请重新授权。已接受申请的双方可更新合作进度，Agent 只能在对应 scope 下更新进度，不能接受或婉拒申请。
 
 ### 14.2 Agent 约束
 

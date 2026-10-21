@@ -12,6 +12,8 @@ import (
 
 const currentUserKey = "auth.current_user"
 const currentActorKey = "auth.current_actor"
+const currentNetworkAccountKey = "auth.current_network_account"
+const currentNetworkAgentTokenKey = "auth.current_network_agent_token"
 
 func RequireAuth(authService *service.AuthService, agentTokenService *service.AgentTokenService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -58,6 +60,87 @@ func RequireAuth(authService *service.AuthService, agentTokenService *service.Ag
 			IsActive:    true,
 		})
 		ctx.Set(currentActorKey, actor)
+		ctx.Next()
+	}
+}
+
+func RequireNetworkAuth(
+	networkService *service.BuilderNetworkService,
+	agentTokenService *service.BuilderNetworkAgentTokenService,
+) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		token, ok := parseBearerToken(ctx.GetHeader("Authorization"))
+		if !ok {
+			abortWithError(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+			return
+		}
+		account, err := networkService.ResolveSession(token)
+		if err == nil {
+			ctx.Set(currentNetworkAccountKey, account)
+			ctx.Set(currentActorKey, domain.Actor{
+				Type:     "human",
+				ID:       account.ID,
+				Username: account.Email,
+				Role:     "network_member",
+			})
+			ctx.Next()
+			return
+		}
+
+		if agentTokenService == nil {
+			abortWithError(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+			return
+		}
+		principal, err := agentTokenService.ResolveToken(token)
+		if err != nil {
+			abortWithError(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+			return
+		}
+		agentTokenID := principal.Token.ID
+		ctx.Set(currentNetworkAccountKey, principal.Account)
+		ctx.Set(currentNetworkAgentTokenKey, principal.Token)
+		ctx.Set(currentActorKey, domain.Actor{
+			Type:         "agent",
+			ID:           principal.Account.ID,
+			Username:     principal.Token.Name,
+			Role:         "network_agent",
+			AgentTokenID: &agentTokenID,
+			Scopes:       principal.Token.Scopes,
+		})
+		ctx.Next()
+	}
+}
+
+func RequireNetworkScopes(scopes ...string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(scopes))
+	for _, scope := range scopes {
+		scope = strings.TrimSpace(scope)
+		if scope != "" {
+			allowed[scope] = struct{}{}
+		}
+	}
+	return func(ctx *gin.Context) {
+		token, isAgent := CurrentNetworkAgentToken(ctx)
+		if !isAgent {
+			ctx.Next()
+			return
+		}
+		for _, scope := range token.Scopes {
+			if _, ok := allowed[scope]; ok {
+				ctx.Next()
+				return
+			}
+		}
+		abortWithError(ctx, stdhttp.StatusForbidden, 4030, "forbidden")
+	}
+}
+
+func RequireNetworkSession() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if _, isAgent := CurrentNetworkAgentToken(ctx); isAgent {
+			abortWithError(ctx, stdhttp.StatusForbidden, 4030, "this action requires a member session")
+			return
+		}
 		ctx.Next()
 	}
 }
@@ -149,6 +232,30 @@ func CurrentActor(ctx *gin.Context) (domain.Actor, bool) {
 	}
 
 	return actor, true
+}
+
+func CurrentNetworkAccount(ctx *gin.Context) (domain.NetworkAccount, bool) {
+	value, exists := ctx.Get(currentNetworkAccountKey)
+	if !exists {
+		return domain.NetworkAccount{}, false
+	}
+	account, ok := value.(domain.NetworkAccount)
+	if !ok {
+		return domain.NetworkAccount{}, false
+	}
+	return account, true
+}
+
+func CurrentNetworkAgentToken(ctx *gin.Context) (domain.NetworkAgentToken, bool) {
+	value, exists := ctx.Get(currentNetworkAgentTokenKey)
+	if !exists {
+		return domain.NetworkAgentToken{}, false
+	}
+	token, ok := value.(domain.NetworkAgentToken)
+	if !ok {
+		return domain.NetworkAgentToken{}, false
+	}
+	return token, true
 }
 
 func parseBearerToken(authHeader string) (string, bool) {

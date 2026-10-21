@@ -16,6 +16,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith("/media/galleries")) return "/media/galleries";
   if (route.path.startsWith("/users")) return "/users";
   if (route.path.startsWith("/agent-tokens")) return "/agent-tokens";
+  if (route.path.startsWith("/builder-network")) return "/builder-network/invitations";
   if (route.path.startsWith("/articles")) return "/articles";
   if (route.path.startsWith("/daily-news")) return "/daily-news";
   if (route.path.startsWith("/events")) return "/events";

@@ -8,7 +8,8 @@ import whiteLogo from "../../../assets/logo/white-bg.svg";
 const route = useRoute();
 
 const isLightTheme = computed(() => route.path.startsWith("/knowledge") || route.path.startsWith("/insights"));
-const showSpaceBackground = computed(() => !isLightTheme.value);
+const isMarket = computed(() => route.path.startsWith("/market"));
+const showSpaceBackground = computed(() => !isLightTheme.value && !isMarket.value);
 const shouldUseGreenLogo = computed(() => route.path === "/" || route.path.startsWith("/builders"));
 
 function ensureThemeColorMeta(): HTMLMetaElement {
@@ -42,6 +43,7 @@ watchEffect(() => {
     document.documentElement.classList.remove("theme-light");
     document.body.classList.remove("theme-light");
   }
+  document.body.classList.toggle("theme-market", isMarket.value);
 
   const meta = ensureThemeColorMeta();
   meta.content = light ? "#fbfbfa" : "#121212";

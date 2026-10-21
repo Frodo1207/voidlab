@@ -364,6 +364,8 @@ export type AgentScope =
   | "knowledge:write"
   | "knowledge_tokens:read"
   | "knowledge_tokens:write"
+  | "network_invitations:read"
+  | "network_invitations:write"
   | "media:read"
   | "media:write";
 
@@ -376,4 +378,14 @@ export interface AgentTokenRecord {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NetworkInviteRecord {
+  id: number;
+  maxUses: number;
+  usedCount: number;
+  expiresAt: string;
+  status: "active" | "disabled";
+  createdBy: number;
+  createdAt: string;
 }
