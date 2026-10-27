@@ -77,22 +77,40 @@ type Article struct {
 }
 
 type Task struct {
-	ID           int64     `json:"id"`
-	Date         string    `json:"date"`
-	Status       string    `json:"status"`
-	SendStatus   string    `json:"send_status"`
-	SendAttempts int       `json:"send_attempts"`
-	SendUUID     string    `json:"send_uuid"`
-	MessageID    string    `json:"message_id"`
-	Message      string    `json:"message"`
-	LastError    string    `json:"last_error"`
-	ReviewerID   int64     `json:"reviewer_id"`
-	ReviewNote   string    `json:"review_note"`
-	CreatedAt    string    `json:"created_at"`
-	UpdatedAt    string    `json:"updated_at"`
-	Snapshot     Snapshot  `json:"snapshot"`
-	Articles     []Article `json:"articles,omitempty"`
-	CopyText     string    `json:"-"`
+	ID           int64         `json:"id"`
+	Date         string        `json:"date"`
+	Status       string        `json:"status"`
+	SendStatus   string        `json:"send_status"`
+	SendAttempts int           `json:"send_attempts"`
+	SendUUID     string        `json:"send_uuid"`
+	MessageID    string        `json:"message_id"`
+	Message      string        `json:"message"`
+	LastError    string        `json:"last_error"`
+	ReviewerID   int64         `json:"reviewer_id"`
+	ReviewNote   string        `json:"review_note"`
+	CreatedAt    string        `json:"created_at"`
+	UpdatedAt    string        `json:"updated_at"`
+	Snapshot     Snapshot      `json:"snapshot"`
+	Articles     []Article     `json:"articles,omitempty"`
+	RunnerReport *RunnerReport `json:"runner_report,omitempty"`
+	CopyText     string        `json:"-"`
+}
+
+type RunnerReport struct {
+	Date           string   `json:"date"`
+	Collect        string   `json:"collect"`
+	TopUp          string   `json:"top_up"`
+	Approve        string   `json:"approve"`
+	Publish        string   `json:"publish"`
+	GenerateCovers string   `json:"generate_covers"`
+	UploadAssets   string   `json:"upload_assets"`
+	BindCovers     string   `json:"bind_covers"`
+	BuildDigest    string   `json:"build_digest"`
+	SendFeishu     string   `json:"send_feishu"`
+	Failures       []string `json:"failures,omitempty"`
+	Warnings       []string `json:"warnings,omitempty"`
+	Complete       bool     `json:"complete"`
+	RecordedAt     string   `json:"recorded_at,omitempty"`
 }
 
 type DeliveryDigest struct {
@@ -199,6 +217,10 @@ CREATE TABLE IF NOT EXISTS dailynews_task_articles (
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `ALTER TABLE dailynews_tasks ADD COLUMN send_copy_text TEXT NOT NULL DEFAULT ''`); err != nil &&
+		!strings.Contains(err.Error(), "duplicate column name") {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `ALTER TABLE dailynews_tasks ADD COLUMN runner_report_json TEXT NOT NULL DEFAULT ''`); err != nil &&
 		!strings.Contains(err.Error(), "duplicate column name") {
 		return nil, err
 	}
@@ -728,16 +750,16 @@ func (s *Service) buildDigest(task Task) DeliveryDigest {
 }
 
 const taskColumns = `id,date,status,send_status,send_attempts,send_uuid,message_id,last_error,
-reviewer_id,review_note,created_at,updated_at,snapshot_json,send_text,send_copy_text`
+reviewer_id,review_note,created_at,updated_at,snapshot_json,send_text,send_copy_text,runner_report_json`
 
 type taskScanner interface{ Scan(...any) error }
 
 func scanTask(row taskScanner) (Task, error) {
 	var task Task
-	var payload string
+	var payload, runnerPayload string
 	err := row.Scan(&task.ID, &task.Date, &task.Status, &task.SendStatus, &task.SendAttempts,
 		&task.SendUUID, &task.MessageID, &task.LastError, &task.ReviewerID, &task.ReviewNote,
-		&task.CreatedAt, &task.UpdatedAt, &payload, &task.Message, &task.CopyText)
+		&task.CreatedAt, &task.UpdatedAt, &payload, &task.Message, &task.CopyText, &runnerPayload)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Task{}, ErrNotFound
 	}
@@ -745,7 +767,17 @@ func scanTask(row taskScanner) (Task, error) {
 		return Task{}, err
 	}
 	err = json.Unmarshal([]byte(payload), &task.Snapshot)
-	return task, err
+	if err != nil {
+		return Task{}, err
+	}
+	if strings.TrimSpace(runnerPayload) != "" {
+		var report RunnerReport
+		if err := json.Unmarshal([]byte(runnerPayload), &report); err != nil {
+			return Task{}, err
+		}
+		task.RunnerReport = &report
+	}
+	return task, nil
 }
 
 func (s *Service) GetByDate(ctx context.Context, date string) (Task, error) {
@@ -784,6 +816,28 @@ func (s *Service) Get(ctx context.Context, id int64) (Task, error) {
 		task.CopyText = s.renderCopyText(task.Date, task.Snapshot, task.Articles)
 	}
 	return task, tx.Commit()
+}
+
+func (s *Service) UpdateRunnerReport(ctx context.Context, date string, report RunnerReport) (Task, error) {
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		return Task{}, errors.New("dailynews: date must be YYYY-MM-DD")
+	}
+	task, err := s.GetByDate(ctx, date)
+	if err != nil {
+		return Task{}, err
+	}
+	report.Date = task.Date
+	report.RecordedAt = s.now().UTC().Format(time.RFC3339Nano)
+	payload, err := json.Marshal(report)
+	if err != nil {
+		return Task{}, err
+	}
+	_, err = s.db.ExecContext(ctx, `UPDATE dailynews_tasks SET runner_report_json=?,updated_at=? WHERE id=?`,
+		string(payload), report.RecordedAt, task.ID)
+	if err != nil {
+		return Task{}, err
+	}
+	return s.Get(ctx, task.ID)
 }
 
 func readArticles(ctx context.Context, tx *sql.Tx, id int64) ([]Article, error) {

@@ -39,6 +39,7 @@ Use this file when the user wants Claude Code to:
 
 - manage the Builder profile
 - publish or update works
+- create or update Projects and their plans or teams
 - publish or update opportunities
 - inspect or organize contact requests
 - read contact exchange results after acceptance
@@ -59,6 +60,8 @@ Before any write:
 - `network_profiles:write`
 - `network_works:read`
 - `network_works:write`
+- `network_projects:read`
+- `network_projects:write`
 - `network_opportunities:read`
 - `network_opportunities:write`
 - `network_contact_requests:read`
@@ -77,6 +80,10 @@ If a protected route returns `403`, explain whether the token is under-scoped or
 - `GET /api/v1/network/works`
 - `POST /api/v1/network/works`
 - `PUT /api/v1/network/works/:id`
+- `GET /api/v1/network/projects`
+- `GET /api/v1/network/projects/:id`
+- `POST /api/v1/network/projects`
+- `PUT /api/v1/network/projects/:id`
 - `GET /api/v1/network/opportunities`
 - `POST /api/v1/network/opportunities`
 - `PUT /api/v1/network/opportunities/:id`
@@ -103,6 +110,8 @@ Use public routes for browsing:
 - `GET /api/v1/public/network/discovery/profiles`
 - `GET /api/v1/public/network/discovery/works`
 - `GET /api/v1/public/network/discovery/opportunities`
+- `GET /api/v1/public/network/projects`
+- `GET /api/v1/public/network/projects/:slug`
 
 ## Operating Rules
 

@@ -327,6 +327,21 @@ func (r *BuilderNetworkRepository) ListPublicProfiles() ([]domain.NetworkProfile
 	return profiles, rows.Err()
 }
 
+func (r *BuilderNetworkRepository) PublicProfilesExist(profileIDs []int64) (bool, error) {
+	for _, profileID := range profileIDs {
+		var exists int
+		if err := r.db.QueryRow(`
+			SELECT EXISTS(SELECT 1 FROM network_profiles WHERE id = ? AND status = 'published')
+		`, profileID).Scan(&exists); err != nil {
+			return false, err
+		}
+		if exists != 1 {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (r *BuilderNetworkRepository) BrowsePublicProfiles(query domain.NetworkDiscoveryQuery) (domain.NetworkPage[domain.NetworkProfile], error) {
 	page, pageSize, offset := normalizePage(query.Page, query.PageSize)
 	conditions := []string{"status = 'published'"}
@@ -599,46 +614,248 @@ func (r *BuilderNetworkRepository) GetPublicProfileBySlug(slug string) (domain.N
 	return profile, nil
 }
 
-func (r *BuilderNetworkRepository) CreateOpportunity(profileID int64, opportunity domain.NetworkOpportunity) (domain.NetworkOpportunity, error) {
-	rolesJSON, _ := json.Marshal(opportunity.LookingFor)
-	skillsJSON, _ := json.Marshal(opportunity.RequiredSkills)
-	result, err := r.db.Exec(`
-		INSERT INTO network_opportunities
-			(profile_id, slug, title, summary, opportunity_type, looking_for_roles_json,
-			 required_skills_json, engagement_mode, budget_hint, duration_hint, city_scope,
-			 remote_allowed, status, expires_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''))
-	`, profileID, opportunity.Slug, opportunity.Title, opportunity.Summary, opportunity.OpportunityType,
-		string(rolesJSON), string(skillsJSON), opportunity.EngagementMode, opportunity.BudgetHint,
-		opportunity.DurationHint, opportunity.CityScope, boolInt(opportunity.RemoteAllowed), opportunity.Status, opportunity.ExpiresAt)
+func (r *BuilderNetworkRepository) CreateProject(profileID int64, project domain.NetworkProject) (domain.NetworkProject, error) {
+	tx, err := r.db.Begin()
 	if err != nil {
-		return domain.NetworkOpportunity{}, err
+		return domain.NetworkProject{}, err
 	}
-	opportunity.ID, err = result.LastInsertId()
+	defer tx.Rollback()
+	project.ID, err = insertNetworkProject(tx, profileID, project)
 	if err != nil {
-		return domain.NetworkOpportunity{}, err
+		return domain.NetworkProject{}, err
 	}
-	opportunity.ProfileID = profileID
-	return opportunity, nil
+	if err := replaceProjectMembers(tx, project.ID, project.Members); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	return r.getProjectByID(project.ID, false)
 }
 
-func (r *BuilderNetworkRepository) ListOpportunitiesByProfile(profileID int64) ([]domain.NetworkOpportunity, error) {
+func (r *BuilderNetworkRepository) UpdateProject(profileID, projectID int64, project domain.NetworkProject) (domain.NetworkProject, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	defer tx.Rollback()
+	planJSON, err := networkProjectPlanJSON(project.ProjectPlan)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	result, err := tx.Exec(`
+		UPDATE network_projects
+		SET title = ?, summary = ?, status = ?, project_plan_json = ?, team_intro = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND owner_profile_id = ?
+	`, project.Title, project.Summary, project.Status, planJSON, project.TeamIntro, projectID, profileID)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	updated, err := result.RowsAffected()
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	if updated == 0 {
+		return domain.NetworkProject{}, ErrNetworkNotFound
+	}
+	if _, err := tx.Exec(`DELETE FROM network_project_members WHERE project_id = ?`, projectID); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	if err := replaceProjectMembers(tx, projectID, project.Members); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	return r.getProjectByID(projectID, false)
+}
+
+func (r *BuilderNetworkRepository) ListProjectsByOwner(profileID int64) ([]domain.NetworkProject, error) {
 	rows, err := r.db.Query(`
-		SELECT o.id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
+		SELECT id FROM network_projects WHERE owner_profile_id = ? ORDER BY created_at DESC, id DESC
+	`, profileID)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	projects := make([]domain.NetworkProject, 0, len(ids))
+	for _, id := range ids {
+		project, err := r.getProjectByID(id, false)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, project)
+	}
+	return projects, nil
+}
+
+func (r *BuilderNetworkRepository) GetProjectByOwner(profileID, projectID int64) (domain.NetworkProject, error) {
+	var ownerProfileID int64
+	if err := r.db.QueryRow(`SELECT owner_profile_id FROM network_projects WHERE id = ?`, projectID).Scan(&ownerProfileID); errors.Is(err, sql.ErrNoRows) {
+		return domain.NetworkProject{}, ErrNetworkNotFound
+	} else if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	if ownerProfileID != profileID {
+		return domain.NetworkProject{}, ErrNetworkNotFound
+	}
+	return r.getProjectByID(projectID, false)
+}
+
+func (r *BuilderNetworkRepository) ListPublicProjects() ([]domain.NetworkProject, error) {
+	rows, err := r.db.Query(`
+		SELECT pr.id FROM network_projects pr
+		JOIN network_profiles owner ON owner.id = pr.owner_profile_id
+		WHERE pr.status = 'published' AND owner.status = 'published'
+		ORDER BY pr.created_at DESC, pr.id DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0)
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	projects := make([]domain.NetworkProject, 0, len(ids))
+	for _, id := range ids {
+		project, err := r.getProjectByID(id, true)
+		if err != nil {
+			return nil, err
+		}
+		projects = append(projects, project)
+	}
+	return projects, nil
+}
+
+func (r *BuilderNetworkRepository) GetPublicProjectBySlug(slug string) (domain.NetworkProject, error) {
+	var projectID int64
+	err := r.db.QueryRow(`
+		SELECT pr.id FROM network_projects pr
+		JOIN network_profiles owner ON owner.id = pr.owner_profile_id
+		WHERE pr.slug = ? AND pr.status = 'published' AND owner.status = 'published'
+	`, slug).Scan(&projectID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.NetworkProject{}, ErrNetworkNotFound
+	}
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	return r.getProjectByID(projectID, true)
+}
+
+func (r *BuilderNetworkRepository) getProjectByID(projectID int64, publicOnly bool) (domain.NetworkProject, error) {
+	var project domain.NetworkProject
+	var planJSON string
+	err := r.db.QueryRow(`
+		SELECT pr.id, pr.owner_profile_id, pr.slug, pr.title, pr.summary, pr.status,
+		       pr.project_plan_json, pr.team_intro, owner.display_name, pr.created_at, pr.updated_at
+		FROM network_projects pr
+		JOIN network_profiles owner ON owner.id = pr.owner_profile_id
+		WHERE pr.id = ?
+	`, projectID).Scan(&project.ID, &project.OwnerProfileID, &project.Slug, &project.Title,
+		&project.Summary, &project.Status, &planJSON, &project.TeamIntro, &project.OwnerName,
+		&project.CreatedAt, &project.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.NetworkProject{}, ErrNetworkNotFound
+	}
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	_ = json.Unmarshal([]byte(planJSON), &project.ProjectPlan)
+	if project.ProjectPlan == nil {
+		project.ProjectPlan = &domain.NetworkProjectPlan{Milestones: []domain.NetworkProjectMilestone{}, Sections: []domain.NetworkProjectPlanSection{}}
+	}
+	project.Members, err = r.listProjectMembers(project.ID)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	project.Opportunities, err = r.listProjectOpportunities(project.ID, publicOnly)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	for index := range project.Opportunities {
+		project.Opportunities[index].ProjectPlan = project.ProjectPlan
+		project.Opportunities[index].TeamIntro = project.TeamIntro
+		project.Opportunities[index].TeamMembers = project.Members
+	}
+	return project, nil
+}
+
+func (r *BuilderNetworkRepository) listProjectMembers(projectID int64) ([]domain.NetworkOpportunityMember, error) {
+	rows, err := r.db.Query(`
+		SELECT m.profile_id, p.display_name, p.slug, p.primary_role, p.headline,
+		       m.role, m.contribution, m.sort_order
+		FROM network_project_members m
+		JOIN network_profiles p ON p.id = m.profile_id AND p.status = 'published'
+		WHERE m.project_id = ?
+		ORDER BY m.sort_order, m.profile_id
+	`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	members := make([]domain.NetworkOpportunityMember, 0)
+	for rows.Next() {
+		var member domain.NetworkOpportunityMember
+		if err := rows.Scan(&member.ProfileID, &member.DisplayName, &member.Slug, &member.PrimaryRole,
+			&member.Headline, &member.Role, &member.Contribution, &member.SortOrder); err != nil {
+			return nil, err
+		}
+		members = append(members, member)
+	}
+	return members, rows.Err()
+}
+
+func (r *BuilderNetworkRepository) listProjectOpportunities(projectID int64, publicOnly bool) ([]domain.NetworkOpportunity, error) {
+	query := `
+		SELECT o.id, o.project_id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
 		       o.looking_for_roles_json, o.required_skills_json, o.engagement_mode, o.budget_hint,
 		       o.duration_hint, o.city_scope, o.remote_allowed, o.status, COALESCE(o.expires_at, ''),
-		       o.created_at, o.updated_at, p.display_name
-		FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id
-		WHERE o.profile_id = ?
-		ORDER BY o.created_at DESC
-	`, profileID)
+		       o.created_at, o.updated_at, owner.display_name, o.project_plan_json, o.team_intro, o.team_members_json
+		FROM network_opportunities o
+		JOIN network_profiles owner ON owner.id = o.profile_id
+		WHERE o.project_id = ?
+	`
+	if publicOnly {
+		query += ` AND o.status = 'open' AND (o.expires_at IS NULL OR o.expires_at > CURRENT_TIMESTAMP)`
+	}
+	query += ` ORDER BY o.created_at DESC, o.id DESC`
+	rows, err := r.db.Query(query, projectID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	opportunities := make([]domain.NetworkOpportunity, 0)
 	for rows.Next() {
-		opportunity, err := scanOpportunity(rows)
+		opportunity, err := scanOpportunityDetail(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -647,20 +864,239 @@ func (r *BuilderNetworkRepository) ListOpportunitiesByProfile(profileID int64) (
 	return opportunities, rows.Err()
 }
 
-func (r *BuilderNetworkRepository) UpdateOpportunity(profileID, opportunityID int64, opportunity domain.NetworkOpportunity) (domain.NetworkOpportunity, error) {
+func insertNetworkProject(tx *sql.Tx, ownerProfileID int64, project domain.NetworkProject) (int64, error) {
+	planJSON, err := networkProjectPlanJSON(project.ProjectPlan)
+	if err != nil {
+		return 0, err
+	}
+	result, err := tx.Exec(`
+		INSERT INTO network_projects
+			(owner_profile_id, slug, title, summary, status, project_plan_json, team_intro)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, ownerProfileID, project.Slug, project.Title, project.Summary, project.Status, planJSON, project.TeamIntro)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+func networkProjectPlanJSON(plan *domain.NetworkProjectPlan) (string, error) {
+	if plan == nil {
+		plan = &domain.NetworkProjectPlan{Milestones: []domain.NetworkProjectMilestone{}, Sections: []domain.NetworkProjectPlanSection{}}
+	}
+	encoded, err := json.Marshal(plan)
+	return string(encoded), err
+}
+
+func replaceProjectMembers(tx *sql.Tx, projectID int64, members []domain.NetworkOpportunityMember) error {
+	for index, member := range members {
+		if _, err := tx.Exec(`
+			INSERT INTO network_project_members(project_id, profile_id, role, contribution, sort_order)
+			VALUES (?, ?, ?, ?, ?)
+		`, projectID, member.ProfileID, member.Role, member.Contribution, index); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "unique") || strings.Contains(strings.ToLower(err.Error()), "constraint") {
+				return ErrNetworkConflict
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func loadProjectDetails(tx *sql.Tx, projectID int64, project *domain.NetworkProject) error {
+	var planJSON string
+	if err := tx.QueryRow(`
+		SELECT title, summary, status, project_plan_json, team_intro
+		FROM network_projects WHERE id = ?
+	`, projectID).Scan(&project.Title, &project.Summary, &project.Status, &planJSON, &project.TeamIntro); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNetworkNotFound
+		}
+		return err
+	}
+	_ = json.Unmarshal([]byte(planJSON), &project.ProjectPlan)
+	rows, err := tx.Query(`
+		SELECT m.profile_id, p.display_name, p.slug, p.primary_role, p.headline,
+		       m.role, m.contribution, m.sort_order
+		FROM network_project_members m
+		JOIN network_profiles p ON p.id = m.profile_id AND p.status = 'published'
+		WHERE m.project_id = ?
+		ORDER BY m.sort_order, m.profile_id
+	`, projectID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	project.Members = make([]domain.NetworkOpportunityMember, 0)
+	for rows.Next() {
+		var member domain.NetworkOpportunityMember
+		if err := rows.Scan(&member.ProfileID, &member.DisplayName, &member.Slug, &member.PrimaryRole,
+			&member.Headline, &member.Role, &member.Contribution, &member.SortOrder); err != nil {
+			return err
+		}
+		project.Members = append(project.Members, member)
+	}
+	return rows.Err()
+}
+
+func (r *BuilderNetworkRepository) CreateOpportunity(profileID int64, opportunity domain.NetworkOpportunity) (domain.NetworkOpportunity, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	defer tx.Rollback()
+
+	project := domain.NetworkProject{
+		Slug: opportunity.Slug, Title: opportunity.Title, Summary: opportunity.Summary,
+		Status: "published", ProjectPlan: opportunity.ProjectPlan, TeamIntro: opportunity.TeamIntro,
+		Members: opportunity.TeamMembers,
+	}
+	if opportunity.Status == "draft" {
+		project.Status = "draft"
+	}
+	if opportunity.ProjectID == 0 {
+		opportunity.ProjectID, err = insertNetworkProject(tx, profileID, project)
+		if err != nil {
+			return domain.NetworkOpportunity{}, err
+		}
+		if err := replaceProjectMembers(tx, opportunity.ProjectID, project.Members); err != nil {
+			return domain.NetworkOpportunity{}, err
+		}
+	} else {
+		var ownerProfileID int64
+		err := tx.QueryRow(`SELECT owner_profile_id FROM network_projects WHERE id = ?`, opportunity.ProjectID).Scan(&ownerProfileID)
+		if errors.Is(err, sql.ErrNoRows) || (err == nil && ownerProfileID != profileID) {
+			return domain.NetworkOpportunity{}, ErrNetworkNotFound
+		}
+		if err != nil {
+			return domain.NetworkOpportunity{}, err
+		}
+		if err := loadProjectDetails(tx, opportunity.ProjectID, &project); err != nil {
+			return domain.NetworkOpportunity{}, err
+		}
+	}
+
 	rolesJSON, _ := json.Marshal(opportunity.LookingFor)
 	skillsJSON, _ := json.Marshal(opportunity.RequiredSkills)
-	result, err := r.db.Exec(`
+	planJSON, _ := json.Marshal(project.ProjectPlan)
+	if project.ProjectPlan == nil {
+		planJSON = []byte(`{"milestones":[],"sections":[]}`)
+	}
+	membersJSON, _ := json.Marshal(project.Members)
+	result, err := tx.Exec(`
+		INSERT INTO network_opportunities
+			(project_id, profile_id, slug, title, summary, opportunity_type, looking_for_roles_json,
+			 required_skills_json, engagement_mode, budget_hint, duration_hint, city_scope,
+			 remote_allowed, status, expires_at, project_plan_json, team_intro, team_members_json)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?)
+	`, opportunity.ProjectID, profileID, opportunity.Slug, opportunity.Title, opportunity.Summary, opportunity.OpportunityType,
+		string(rolesJSON), string(skillsJSON), opportunity.EngagementMode, opportunity.BudgetHint,
+		opportunity.DurationHint, opportunity.CityScope, boolInt(opportunity.RemoteAllowed), opportunity.Status,
+		opportunity.ExpiresAt, string(planJSON), project.TeamIntro, string(membersJSON))
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	opportunity.ID, err = result.LastInsertId()
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	opportunity.ProfileID = profileID
+	if err := tx.Commit(); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	return r.getOpportunityByID(opportunity.ID)
+}
+
+func (r *BuilderNetworkRepository) ListOpportunitiesByProfile(profileID int64) ([]domain.NetworkOpportunity, error) {
+	rows, err := r.db.Query(`
+		SELECT o.id, o.project_id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
+		       o.looking_for_roles_json, o.required_skills_json, o.engagement_mode, o.budget_hint,
+		       o.duration_hint, o.city_scope, o.remote_allowed, o.status, COALESCE(o.expires_at, ''),
+			o.created_at, o.updated_at, p.display_name, o.project_plan_json, o.team_intro, o.team_members_json
+		FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id
+		WHERE o.profile_id = ?
+		ORDER BY o.created_at DESC
+	`, profileID)
+	if err != nil {
+		return nil, err
+	}
+	opportunities := make([]domain.NetworkOpportunity, 0)
+	for rows.Next() {
+		opportunity, err := scanOpportunityDetail(rows)
+		if err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		opportunities = append(opportunities, opportunity)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	for index := range opportunities {
+		opportunity, err := r.attachOpportunityProjectDetails(opportunities[index])
+		if err != nil {
+			return nil, err
+		}
+		opportunities[index] = opportunity
+	}
+	return opportunities, nil
+}
+
+func (r *BuilderNetworkRepository) UpdateOpportunity(profileID, opportunityID int64, opportunity domain.NetworkOpportunity) (domain.NetworkOpportunity, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	defer tx.Rollback()
+
+	var projectID int64
+	err = tx.QueryRow(`
+		SELECT project_id FROM network_opportunities WHERE id = ? AND profile_id = ?
+	`, opportunityID, profileID).Scan(&projectID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.NetworkOpportunity{}, ErrNetworkNotFound
+	}
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	var projectStatus string
+	var projectOpportunityCount int
+	if err := tx.QueryRow(`SELECT status FROM network_projects WHERE id = ?`, projectID).Scan(&projectStatus); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM network_opportunities WHERE project_id = ?`, projectID).Scan(&projectOpportunityCount); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	if projectOpportunityCount == 1 {
+		if opportunity.Status == "draft" {
+			projectStatus = "draft"
+		} else if opportunity.Status == "open" && projectStatus == "draft" {
+			projectStatus = "published"
+		}
+	}
+	rolesJSON, _ := json.Marshal(opportunity.LookingFor)
+	skillsJSON, _ := json.Marshal(opportunity.RequiredSkills)
+	planJSON, _ := json.Marshal(opportunity.ProjectPlan)
+	if opportunity.ProjectPlan == nil {
+		planJSON = []byte(`{"milestones":[],"sections":[]}`)
+	}
+	membersJSON, _ := json.Marshal(opportunity.TeamMembers)
+	result, err := tx.Exec(`
 		UPDATE network_opportunities
 		SET title = ?, summary = ?, opportunity_type = ?, looking_for_roles_json = ?,
 		    required_skills_json = ?, engagement_mode = ?, budget_hint = ?, duration_hint = ?,
 		    city_scope = ?, remote_allowed = ?, status = ?, expires_at = NULLIF(?, ''),
+			project_plan_json = ?, team_intro = ?, team_members_json = ?,
 		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = ? AND profile_id = ?
 	`, opportunity.Title, opportunity.Summary, opportunity.OpportunityType, string(rolesJSON),
 		string(skillsJSON), opportunity.EngagementMode, opportunity.BudgetHint, opportunity.DurationHint,
 		opportunity.CityScope, boolInt(opportunity.RemoteAllowed), opportunity.Status, opportunity.ExpiresAt,
-		opportunityID, profileID)
+		string(planJSON), opportunity.TeamIntro, string(membersJSON), opportunityID, profileID)
 	if err != nil {
 		return domain.NetworkOpportunity{}, err
 	}
@@ -671,28 +1107,53 @@ func (r *BuilderNetworkRepository) UpdateOpportunity(profileID, opportunityID in
 	if updated == 0 {
 		return domain.NetworkOpportunity{}, ErrNetworkNotFound
 	}
+	_, err = tx.Exec(`
+		UPDATE network_projects
+		SET title = ?, summary = ?, status = ?, project_plan_json = ?, team_intro = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND owner_profile_id = ?
+	`, opportunity.Title, opportunity.Summary, projectStatus, string(planJSON), opportunity.TeamIntro, projectID, profileID)
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	if _, err := tx.Exec(`DELETE FROM network_project_members WHERE project_id = ?`, projectID); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	if err := replaceProjectMembers(tx, projectID, opportunity.TeamMembers); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
 	return r.getOpportunityByID(opportunityID)
 }
 
 func (r *BuilderNetworkRepository) GetPublicOpportunityBySlug(slug string) (domain.NetworkOpportunity, error) {
-	return scanOpportunity(r.db.QueryRow(`
-		SELECT o.id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
+	opportunity, err := scanOpportunityDetail(r.db.QueryRow(`
+		SELECT o.id, o.project_id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
 		       o.looking_for_roles_json, o.required_skills_json, o.engagement_mode, o.budget_hint,
 		       o.duration_hint, o.city_scope, o.remote_allowed, o.status, COALESCE(o.expires_at, ''),
-		       o.created_at, o.updated_at, p.display_name
-		FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id
+			o.created_at, o.updated_at, p.display_name, o.project_plan_json, o.team_intro, o.team_members_json
+		FROM network_opportunities o
+		JOIN network_profiles p ON p.id = o.profile_id
+		JOIN network_projects pr ON pr.id = o.project_id AND pr.status = 'published'
 		WHERE o.slug = ? AND o.status = 'open' AND p.status = 'published'
 		  AND (o.expires_at IS NULL OR o.expires_at > CURRENT_TIMESTAMP)
 	`, slug))
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	return r.attachOpportunityProjectDetails(opportunity)
 }
 
 func (r *BuilderNetworkRepository) ListPublicOpportunities() ([]domain.NetworkOpportunity, error) {
 	rows, err := r.db.Query(`
-		SELECT o.id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
+		SELECT o.id, o.project_id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
 		       o.looking_for_roles_json, o.required_skills_json, o.engagement_mode, o.budget_hint,
 		       o.duration_hint, o.city_scope, o.remote_allowed, o.status, COALESCE(o.expires_at, ''),
-		       o.created_at, o.updated_at, p.display_name
-		FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id
+			o.created_at, o.updated_at, p.display_name
+		FROM network_opportunities o
+		JOIN network_profiles p ON p.id = o.profile_id
+		JOIN network_projects pr ON pr.id = o.project_id AND pr.status = 'published'
 		WHERE o.status = 'open' AND p.status = 'published'
 		  AND (o.expires_at IS NULL OR o.expires_at > CURRENT_TIMESTAMP)
 		ORDER BY o.created_at DESC
@@ -717,6 +1178,7 @@ func (r *BuilderNetworkRepository) BrowsePublicOpportunities(query domain.Networ
 	conditions := []string{
 		"o.status = 'open'",
 		"p.status = 'published'",
+		"pr.status = 'published'",
 		"(o.expires_at IS NULL OR o.expires_at > CURRENT_TIMESTAMP)",
 	}
 	args := make([]any, 0)
@@ -734,17 +1196,17 @@ func (r *BuilderNetworkRepository) BrowsePublicOpportunities(query domain.Networ
 		}
 	}
 	where := strings.Join(conditions, " AND ")
-	join := " FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id WHERE " + where
+	join := " FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id JOIN network_projects pr ON pr.id = o.project_id WHERE " + where
 
 	var total int
 	if err := r.db.QueryRow(`SELECT COUNT(*)`+join, args...).Scan(&total); err != nil {
 		return domain.NetworkPage[domain.NetworkOpportunity]{}, err
 	}
 	rows, err := r.db.Query(`
-		SELECT o.id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
+		SELECT o.id, o.project_id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
 		       o.looking_for_roles_json, o.required_skills_json, o.engagement_mode, o.budget_hint,
 		       o.duration_hint, o.city_scope, o.remote_allowed, o.status, COALESCE(o.expires_at, ''),
-		       o.created_at, o.updated_at, p.display_name`+join+`
+			o.created_at, o.updated_at, p.display_name`+join+`
 		ORDER BY o.created_at DESC, o.id DESC LIMIT ? OFFSET ?
 	`, append(args, pageSize, offset)...)
 	if err != nil {
@@ -858,7 +1320,7 @@ func scanOpportunity(row interface{ Scan(...any) error }) (domain.NetworkOpportu
 	var opportunity domain.NetworkOpportunity
 	var rolesJSON, skillsJSON string
 	var remote int
-	err := row.Scan(&opportunity.ID, &opportunity.ProfileID, &opportunity.Slug, &opportunity.Title,
+	err := row.Scan(&opportunity.ID, &opportunity.ProjectID, &opportunity.ProfileID, &opportunity.Slug, &opportunity.Title,
 		&opportunity.Summary, &opportunity.OpportunityType, &rolesJSON, &skillsJSON,
 		&opportunity.EngagementMode, &opportunity.BudgetHint, &opportunity.DurationHint,
 		&opportunity.CityScope, &remote, &opportunity.Status, &opportunity.ExpiresAt,
@@ -875,15 +1337,89 @@ func scanOpportunity(row interface{ Scan(...any) error }) (domain.NetworkOpportu
 	return opportunity, nil
 }
 
+func scanOpportunityDetail(row interface{ Scan(...any) error }) (domain.NetworkOpportunity, error) {
+	var opportunity domain.NetworkOpportunity
+	var rolesJSON, skillsJSON, planJSON, membersJSON string
+	var remote int
+	err := row.Scan(&opportunity.ID, &opportunity.ProjectID, &opportunity.ProfileID, &opportunity.Slug, &opportunity.Title,
+		&opportunity.Summary, &opportunity.OpportunityType, &rolesJSON, &skillsJSON,
+		&opportunity.EngagementMode, &opportunity.BudgetHint, &opportunity.DurationHint,
+		&opportunity.CityScope, &remote, &opportunity.Status, &opportunity.ExpiresAt,
+		&opportunity.CreatedAt, &opportunity.UpdatedAt, &opportunity.OwnerName,
+		&planJSON, &opportunity.TeamIntro, &membersJSON)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.NetworkOpportunity{}, ErrNetworkNotFound
+	}
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	opportunity.RemoteAllowed = remote != 0
+	_ = json.Unmarshal([]byte(rolesJSON), &opportunity.LookingFor)
+	_ = json.Unmarshal([]byte(skillsJSON), &opportunity.RequiredSkills)
+	_ = json.Unmarshal([]byte(planJSON), &opportunity.ProjectPlan)
+	_ = json.Unmarshal([]byte(membersJSON), &opportunity.TeamMembers)
+	return opportunity, nil
+}
+
 func (r *BuilderNetworkRepository) getOpportunityByID(opportunityID int64) (domain.NetworkOpportunity, error) {
-	return scanOpportunity(r.db.QueryRow(`
-		SELECT o.id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
+	opportunity, err := scanOpportunityDetail(r.db.QueryRow(`
+		SELECT o.id, o.project_id, o.profile_id, o.slug, o.title, o.summary, o.opportunity_type,
 		       o.looking_for_roles_json, o.required_skills_json, o.engagement_mode, o.budget_hint,
 		       o.duration_hint, o.city_scope, o.remote_allowed, o.status, COALESCE(o.expires_at, ''),
-		       o.created_at, o.updated_at, p.display_name
+			o.created_at, o.updated_at, p.display_name, o.project_plan_json, o.team_intro, o.team_members_json
 		FROM network_opportunities o JOIN network_profiles p ON p.id = o.profile_id
 		WHERE o.id = ?
 	`, opportunityID))
+	if err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	return r.attachOpportunityProjectDetails(opportunity)
+}
+
+func (r *BuilderNetworkRepository) attachOpportunityProjectDetails(opportunity domain.NetworkOpportunity) (domain.NetworkOpportunity, error) {
+	project := domain.NetworkProject{}
+	if err := loadProjectDetailsFromDB(r.db, opportunity.ProjectID, &project); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
+	opportunity.ProjectPlan = project.ProjectPlan
+	opportunity.TeamIntro = project.TeamIntro
+	opportunity.TeamMembers = project.Members
+	return opportunity, nil
+}
+
+func loadProjectDetailsFromDB(db *sql.DB, projectID int64, project *domain.NetworkProject) error {
+	var planJSON string
+	if err := db.QueryRow(`
+		SELECT project_plan_json, team_intro FROM network_projects WHERE id = ?
+	`, projectID).Scan(&planJSON, &project.TeamIntro); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNetworkNotFound
+		}
+		return err
+	}
+	_ = json.Unmarshal([]byte(planJSON), &project.ProjectPlan)
+	rows, err := db.Query(`
+		SELECT m.profile_id, p.display_name, p.slug, p.primary_role, p.headline,
+		       m.role, m.contribution, m.sort_order
+		FROM network_project_members m
+		JOIN network_profiles p ON p.id = m.profile_id AND p.status = 'published'
+		WHERE m.project_id = ?
+		ORDER BY m.sort_order, m.profile_id
+	`, projectID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	project.Members = make([]domain.NetworkOpportunityMember, 0)
+	for rows.Next() {
+		var member domain.NetworkOpportunityMember
+		if err := rows.Scan(&member.ProfileID, &member.DisplayName, &member.Slug, &member.PrimaryRole,
+			&member.Headline, &member.Role, &member.Contribution, &member.SortOrder); err != nil {
+			return err
+		}
+		project.Members = append(project.Members, member)
+	}
+	return rows.Err()
 }
 
 func (r *BuilderNetworkRepository) CreateContactRequest(fromProfileID int64, request domain.NetworkContactRequest) (domain.NetworkContactRequest, error) {

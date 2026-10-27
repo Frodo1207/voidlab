@@ -37,6 +37,18 @@ export const eventMocks: EventRecord[] = [
     content: "Phase 1 活动编辑器示例内容。",
     coverUrl: "https://placehold.co/1200x630?text=Event",
     status: "draft",
+    signupMode: "closed",
+    signupStatus: "closed",
+    signupEnabled: false,
+    signupStartsAt: "",
+    signupDeadline: "",
+    capacity: 0,
+    signupCount: 0,
+    allowSignupDuringLive: false,
+    externalSignupUrl: "",
+    signupButtonLabel: "",
+    signupSuccessMessage: "",
+    signupClosedReason: "",
     updatedAt: "2026-07-31 10:00"
   }
 ];

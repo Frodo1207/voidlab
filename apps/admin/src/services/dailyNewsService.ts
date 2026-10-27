@@ -21,6 +21,24 @@ export interface DailyNewsTask {
   copy_text?: string;
   message_id: string;
   last_error: string;
+  runner_report?: DailyNewsRunnerReport | null;
+}
+
+export interface DailyNewsRunnerReport {
+  date: string;
+  collect: string;
+  top_up: string;
+  approve: string;
+  publish: string;
+  generate_covers: string;
+  upload_assets: string;
+  bind_covers: string;
+  build_digest: string;
+  send_feishu: string;
+  failures?: string[];
+  warnings?: string[];
+  complete: boolean;
+  recorded_at?: string;
 }
 
 const basePath = "/api/v1/daily-news";
@@ -41,7 +59,14 @@ function normalizeTask(task: DailyNewsTask): DailyNewsTask {
     message: task.message ?? "",
     copy_text: task.copy_text ?? "",
     message_id: task.message_id ?? "",
-    last_error: task.last_error ?? ""
+    last_error: task.last_error ?? "",
+    runner_report: task.runner_report
+      ? {
+          ...task.runner_report,
+          failures: task.runner_report.failures ?? [],
+          warnings: task.runner_report.warnings ?? []
+        }
+      : null
   };
 }
 

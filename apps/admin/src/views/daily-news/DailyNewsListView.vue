@@ -27,6 +27,18 @@ const statusLabels: Record<string, string> = {
 const sendStatusLabels: Record<string, string> = {
   pending: "待发送", sending: "发送中", failed: "发送失败", sent: "已发送"
 };
+const runnerStepLabels: Record<string, string> = {
+  collect: "collect",
+  top_up: "top-up",
+  approve: "approve",
+  publish: "publish",
+  generate_covers: "generate covers",
+  upload_assets: "upload assets",
+  bind_covers: "bind covers",
+  build_digest: "build digest",
+  send_feishu: "send Feishu"
+};
+const runnerStepEntries = Object.entries(runnerStepLabels);
 
 function statusLabel(status: string) {
   return statusLabels[status] ?? status;
@@ -82,6 +94,11 @@ function safeLink(url?: string) {
   } catch {
     return undefined;
   }
+}
+
+function runnerStepValue(report: Record<string, unknown> | undefined, key: string) {
+  const value = report?.[key];
+  return typeof value === "string" && value.trim() ? value : "skip";
 }
 
 async function handleCollect() {
@@ -218,6 +235,34 @@ onMounted(() => void loadRecords());
           <el-descriptions-item label="消息 ID" :span="2">{{ selectedTask.message_id || "尚未发送" }}</el-descriptions-item>
         </el-descriptions>
         <el-alert v-if="selectedTask.last_error" :title="selectedTask.last_error" type="error" :closable="false" show-icon />
+        <section v-if="selectedTask.runner_report">
+          <div class="section-header">
+            <h3>云端运行结果</h3>
+            <el-tag :type="selectedTask.runner_report.complete ? 'success' : 'warning'">
+              {{ selectedTask.runner_report.complete ? "已完成" : "未完成" }}
+            </el-tag>
+          </div>
+          <p v-if="selectedTask.runner_report.recorded_at">最近回写：{{ selectedTask.runner_report.recorded_at }}</p>
+          <el-descriptions :column="1" border>
+            <el-descriptions-item v-for="[key, label] in runnerStepEntries" :key="key" :label="label">
+              {{ runnerStepValue(selectedTask.runner_report, key) }}
+            </el-descriptions-item>
+          </el-descriptions>
+          <el-alert
+            v-if="selectedTask.runner_report.failures?.length"
+            :title="selectedTask.runner_report.failures.join('\n')"
+            type="error"
+            :closable="false"
+            show-icon
+          />
+          <el-alert
+            v-if="selectedTask.runner_report.warnings?.length"
+            :title="selectedTask.runner_report.warnings.join('\n')"
+            type="warning"
+            :closable="false"
+            show-icon
+          />
+        </section>
         <section>
           <h3>资讯内容</h3>
           <el-empty v-if="!selectedTask.items.length" description="暂无资讯" />
@@ -263,6 +308,7 @@ p { margin: 8px 0 12px; color: rgba(17, 24, 39, 0.65); }
 .draft-links { display: flex; flex-wrap: wrap; gap: 8px; }
 .draft-links .el-button { margin-left: 0; }
 .detail { overflow-wrap: anywhere; }
+.detail :deep(.el-alert__description) { white-space: pre-wrap; }
 @media (max-width: 900px) {
   .toolbar { align-items: flex-start; flex-direction: column; }
   .toolbar-actions { justify-content: flex-start; }

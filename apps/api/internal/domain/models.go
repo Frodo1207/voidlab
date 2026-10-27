@@ -212,24 +212,89 @@ type NetworkPage[T any] struct {
 }
 
 type NetworkOpportunity struct {
-	ID              int64    `json:"id"`
-	ProfileID       int64    `json:"profile_id"`
-	Slug            string   `json:"slug"`
-	Title           string   `json:"title"`
-	Summary         string   `json:"summary"`
-	OpportunityType string   `json:"opportunity_type"`
-	LookingFor      []string `json:"looking_for_roles"`
-	RequiredSkills  []string `json:"required_skills"`
-	EngagementMode  string   `json:"engagement_mode"`
-	BudgetHint      string   `json:"budget_hint"`
-	DurationHint    string   `json:"duration_hint"`
-	CityScope       string   `json:"city_scope"`
-	RemoteAllowed   bool     `json:"remote_allowed"`
-	Status          string   `json:"status"`
-	ExpiresAt       string   `json:"expires_at"`
-	CreatedAt       string   `json:"created_at"`
-	UpdatedAt       string   `json:"updated_at"`
-	OwnerName       string   `json:"owner_name,omitempty"`
+	ID              int64                      `json:"id"`
+	ProjectID       int64                      `json:"project_id"`
+	ProfileID       int64                      `json:"profile_id"`
+	Slug            string                     `json:"slug"`
+	Title           string                     `json:"title"`
+	Summary         string                     `json:"summary"`
+	OpportunityType string                     `json:"opportunity_type"`
+	LookingFor      []string                   `json:"looking_for_roles"`
+	RequiredSkills  []string                   `json:"required_skills"`
+	EngagementMode  string                     `json:"engagement_mode"`
+	BudgetHint      string                     `json:"budget_hint"`
+	DurationHint    string                     `json:"duration_hint"`
+	CityScope       string                     `json:"city_scope"`
+	RemoteAllowed   bool                       `json:"remote_allowed"`
+	Status          string                     `json:"status"`
+	ExpiresAt       string                     `json:"expires_at"`
+	CreatedAt       string                     `json:"created_at"`
+	UpdatedAt       string                     `json:"updated_at"`
+	OwnerName       string                     `json:"owner_name,omitempty"`
+	ProjectPlan     *NetworkProjectPlan        `json:"project_plan,omitempty"`
+	TeamIntro       string                     `json:"team_intro,omitempty"`
+	TeamMembers     []NetworkOpportunityMember `json:"team_members,omitempty"`
+}
+
+type NetworkProject struct {
+	ID             int64                      `json:"id"`
+	OwnerProfileID int64                      `json:"owner_profile_id"`
+	Slug           string                     `json:"slug"`
+	Title          string                     `json:"title"`
+	Summary        string                     `json:"summary"`
+	Status         string                     `json:"status"`
+	ProjectPlan    *NetworkProjectPlan        `json:"project_plan,omitempty"`
+	TeamIntro      string                     `json:"team_intro"`
+	OwnerName      string                     `json:"owner_name,omitempty"`
+	Members        []NetworkOpportunityMember `json:"members"`
+	Opportunities  []NetworkOpportunity       `json:"opportunities,omitempty"`
+	CreatedAt      string                     `json:"created_at"`
+	UpdatedAt      string                     `json:"updated_at"`
+}
+
+type NetworkProjectPlan struct {
+	Milestones []NetworkProjectMilestone   `json:"milestones"`
+	Sections   []NetworkProjectPlanSection `json:"sections"`
+}
+
+type NetworkProjectMilestone struct {
+	Title              string                `json:"title"`
+	Description        string                `json:"description"`
+	Order              int                   `json:"order"`
+	Status             string                `json:"status"`
+	Timing             *NetworkProjectTiming `json:"timing,omitempty"`
+	Goals              []string              `json:"goals"`
+	Deliverables       []string              `json:"deliverables"`
+	AcceptanceCriteria []string              `json:"acceptance_criteria"`
+	OwnerMemberIDs     []int64               `json:"owner_member_ids"`
+}
+
+type NetworkProjectTiming struct {
+	Kind          string `json:"kind"`
+	Label         string `json:"label,omitempty"`
+	StartAt       string `json:"start_at,omitempty"`
+	EndAt         string `json:"end_at,omitempty"`
+	DurationValue int    `json:"duration_value,omitempty"`
+	DurationUnit  string `json:"duration_unit,omitempty"`
+}
+
+type NetworkProjectPlanSection struct {
+	Type      string   `json:"type"`
+	Title     string   `json:"title"`
+	Body      string   `json:"body,omitempty"`
+	Items     []string `json:"items"`
+	SortOrder int      `json:"sort_order"`
+}
+
+type NetworkOpportunityMember struct {
+	ProfileID    int64  `json:"profile_id"`
+	DisplayName  string `json:"display_name,omitempty"`
+	Slug         string `json:"slug,omitempty"`
+	PrimaryRole  string `json:"primary_role,omitempty"`
+	Headline     string `json:"headline,omitempty"`
+	Role         string `json:"role"`
+	Contribution string `json:"contribution"`
+	SortOrder    int    `json:"sort_order"`
 }
 
 type NetworkContactRequest struct {

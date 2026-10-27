@@ -806,3 +806,207 @@
   - 飞书消息 ID：`om_x100b623b4ee9d0a4dd280503ce2cfca`
 - 是否回滚：否
 - 备注：当前日报已成功投递到 `voidlab运营`
+
+### [WEB-01] 发布 BuilderNetwork 市场详情页与 Header 统一
+
+- 时间：2026-10-22 01:33:00 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：发布官网前端静态资源（market 详情页 + header 全宽一致性相关改动）
+- 命令：
+  ```bash
+  npm run build:web
+  mkdir -p dist-packages
+  tar -czf dist-packages/web-dist.tar.gz -C apps/web/dist .
+
+  TS=$(date +%Y%m%d-%H%M%S)
+  scp dist-packages/web-dist.tar.gz \
+    root@142.248.136.161:/opt/voidlab/packages/web-dist-$TS.tar.gz
+
+  ssh root@142.248.136.161 '
+    set -euo pipefail
+    PKG=/opt/voidlab/packages/web-dist-20261022-012943.tar.gz
+    DEST=/var/www/voidlab/web
+    TS=$(date +%Y%m%d-%H%M%S)
+    mkdir -p /opt/voidlab/backup/web
+    mkdir -p "$DEST"
+    if [ -n "$(ls -A "$DEST" 2>/dev/null || true)" ]; then
+      tar -czf /opt/voidlab/backup/web/web-$TS.tar.gz -C "$DEST" .
+    fi
+    find "$DEST" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    tar -xzf "$PKG" -C "$DEST"
+    find "$DEST" \( -name "._*" -o -name ".DS_Store" \) -delete
+  '
+
+  ssh root@142.248.136.161 'curl -kfsSL https://127.0.0.1/market/projects | head -n 5'
+  ssh root@142.248.136.161 'curl -kfsSL https://127.0.0.1/market/projects/agent-workflow-platform-mvp | head -n 5'
+  ```
+- 结果：
+  - 新包已上传：`/opt/voidlab/packages/web-dist-20261022-012943.tar.gz`
+  - 官网静态资源已替换到：`/var/www/voidlab/web`
+  - 自动备份已生成：`/opt/voidlab/backup/web/web-20261021-173251.tar.gz`
+  - 服务器侧验证通过（HTTPS 本地回环，忽略自签证书）：`/market/projects`、`/market/projects/agent-workflow-platform-mvp` 可返回 HTML
+- 是否回滚：否
+- 备注：本次仅更新 `web` 静态资源，未触发 API / admin 的更新与容器重启
+
+### [WEB-02] 同步热门项目封面静态资源
+
+- 时间：2026-10-22 10:18:00 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：发布官网前端静态资源（新增 `/market/covers/*.jpg`，用于热门项目与项目详情页封面）
+- 命令：
+  ```bash
+  npm run build:web
+  TS=$(date +%Y%m%d-%H%M%S)
+  tar -czf dist-packages/web-dist-$TS.tar.gz -C apps/web/dist .
+  scp dist-packages/web-dist-$TS.tar.gz \
+    root@142.248.136.161:/opt/voidlab/packages/web-dist-$TS.tar.gz
+
+  ssh root@142.248.136.161 "
+    set -euo pipefail
+    PKG=/opt/voidlab/packages/web-dist-20261022-101703.tar.gz
+    DEST=/var/www/voidlab/web
+    BK_DIR=/opt/voidlab/backup/web
+    BK_TS=\$(date +%Y%m%d-%H%M%S)
+    mkdir -p \"\$BK_DIR\" \"\$DEST\"
+    if [ -n \"\$(ls -A \"\$DEST\" 2>/dev/null || true)\" ]; then
+      tar -czf \"\$BK_DIR/web-\$BK_TS.tar.gz\" -C \"\$DEST\" .
+    fi
+    find \"\$DEST\" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    tar -xzf \"\$PKG\" -C \"\$DEST\"
+    find \"\$DEST\" \( -name '._*' -o -name '.DS_Store' \) -delete
+  "
+
+  curl -sSI https://voidlab.club/market/covers/agent-workflow-platform-mvp.jpg | head -n 8
+  ```
+- 结果：
+  - 新包已上传：`/opt/voidlab/packages/web-dist-20261022-101703.tar.gz`
+  - 官网静态资源已替换到：`/var/www/voidlab/web`
+  - 自动备份已生成：`/opt/voidlab/backup/web/web-20261022-021815.tar.gz`
+  - 静态封面可用：`GET https://voidlab.club/market/covers/agent-workflow-platform-mvp.jpg` 返回 `200 image/jpeg`
+- 是否回滚：否
+- 备注：本次仅更新 `web` 静态资源；tar 解压时出现 `LIBARCHIVE.xattr.com.apple.provenance` 提示但不影响文件落盘
+
+### [DEPLOY-20261023-P3] BuilderNetwork 与 daily-news 发布包预构建
+
+- 时间：2026-10-23 11:45 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：执行发布前测试、前端打包和 API 镜像打包
+- 命令：
+  ```bash
+  (cd apps/api && go test ./...)
+  npm run lint:web
+  npm run lint:admin
+  bash scripts/package-frontends.sh
+  bash scripts/package-api-image.sh
+  curl --silent --show-error --max-time 5 \
+    --unix-socket "$HOME/.docker/run/docker.sock" http://localhost/_ping
+  ```
+- 结果：
+  - Go 全量测试、web/admin 类型检查通过；npm 输出配置兼容性警告。
+  - `dist-packages/web-dist.tar.gz`（4.1 MB）和 `dist-packages/admin-dist.tar.gz`（418 KB）构建成功。官网包含 BuilderNetwork Skill 下载文件和 5 张项目封面。
+  - 官网与后台 bundle 均有超过 500 KB 的 chunk 警告，不影响构建完成。
+  - API 镜像包未生成。本机 Docker socket 的 5 秒健康探测超时，API 镜像构建持续无响应后已停止；线上尚未上传或更新。
+  - 原有 `admin-dist.tar.gz` 已备份至 `/tmp/voidlab-admin-dist-before-20261023.tar.gz`，备份哈希与覆盖前文件一致。
+- 是否回滚：否（未触碰线上）
+- 备注：继续前需要恢复本机 Docker Desktop；当前日报生产开关为关闭状态，runner 不会执行自动采集或分发。
+
+### [DEPLOY-20261023-P3-RETRY] 完成 BuilderNetwork 与 daily-news 发布包构建
+
+- 时间：2026-10-23 17:27 CST
+- 执行人：TRAE
+- 执行位置：本地
+- 动作：重启本机 Docker Desktop，按生产服务器架构构建 API 镜像并导出发布包
+- 命令：
+  ```bash
+  osascript -e 'tell application "Docker" to quit' && open -a Docker
+  curl --silent --show-error --max-time 5 \
+    --unix-socket "$HOME/.docker/run/docker.sock" http://localhost/_ping
+  bash scripts/package-api-image.sh
+  docker image inspect voidlab-api:latest --format '{{.Id}} {{.Os}}/{{.Architecture}}'
+  ```
+- 结果：
+  - Docker Desktop 恢复，daemon 返回 `OK`。
+  - 本机为 `linux/arm64`，生产服务器为 `x86_64`；已将 `scripts/build-api-image.sh` 设置为显式构建 `linux/amd64`，避免架构不匹配。
+  - `dist-packages/web-dist.tar.gz`：4.1 MB，SHA-256 `fa87acc9b5a37674f50984c5c38f31c1f9db3463825b5495ddd734445209fc1f`。
+  - `dist-packages/admin-dist.tar.gz`：418 KB，SHA-256 `273df7750820245a98b4c231e279f008a7c402ffe971d372e0ff116b98fb37be`。
+  - `dist-packages/voidlab-api.tar`：35 MB，SHA-256 `a292ca63ece74526fe766749fcfd643c6a66d7a486e62df8f8988c1822870122`；镜像为 `linux/amd64`。
+  - API 镜像包含 `voidlab-api` 与 `voidlab-dailynews-runner`；日报生产开关关闭且 Agent Token 未配置，runner 保持 idle。
+- 是否回滚：否（尚未上传）
+- 备注：线上 Nginx 已有 `/market` 精确 SPA 规则，仓库部署配置未包含该规则；本次不覆盖或重载现有 Nginx 配置。
+
+### [DEPLOY-20261023-P4-STAGE] 上传发布包并建立线上回滚点
+
+- 时间：2026-10-23 17:30 CST
+- 执行人：TRAE
+- 执行位置：本地 / 服务器
+- 动作：上传版本化 web、admin、API 镜像和 Compose 包；校验哈希并备份现有线上资源
+- 命令：
+  ```bash
+  scp dist-packages/web-dist.tar.gz root@142.248.136.161:/opt/voidlab/packages/web-dist-20261023-1727.tar.gz
+  scp dist-packages/admin-dist.tar.gz root@142.248.136.161:/opt/voidlab/packages/admin-dist-20261023-1727.tar.gz
+  scp dist-packages/voidlab-api.tar root@142.248.136.161:/opt/voidlab/packages/voidlab-api-20261023-1727.tar
+  scp deploy/docker-compose.server.yml root@142.248.136.161:/opt/voidlab/packages/docker-compose.server-20261023-1727.yml
+  ssh root@142.248.136.161 'sha256sum /opt/voidlab/packages/*20261023-1727*'
+  ```
+- 结果：
+  - 三个应用包的服务器端哈希与本地一致；Compose 文件已上传。
+  - 线上静态目录已备份至 `/opt/voidlab/backup/web/web-pre-20261023-1730.tar.gz` 和 `/opt/voidlab/backup/admin/admin-pre-20261023-1730.tar.gz`。
+  - 原 Compose 文件已备份至 `/opt/voidlab/backup/deploy/docker-compose.server-pre-20261023-1730.yml`。
+  - 原 API 镜像已保留回滚 tag `voidlab-api:rollback-20261023-1730`（image ID `sha256:5a02cb4ceac52450e5b214b4e31c4cfa59c053254023e920b4ebdf716209c629`）。
+  - 生产环境 `PUBLIC_BASE_URL`、`DAILY_NEWS_SITE_URL` 均为 `https://voidlab.club`；日报和 runner 开关关闭。新 Compose 将增加一个保持 idle 的 runner 服务。
+- 是否回滚：否（尚未切换线上服务）
+- 备注：生产 Nginx 已有 `/market` 精确 SPA 规则；本次保留现有 Nginx 配置，不上传仓库中缺少该规则的 Nginx 文件。
+
+### [DEPLOY-20261023-P4-API] 更新生产 API 与 Compose
+
+- 时间：2026-10-23 17:32 CST
+- 执行人：TRAE
+- 执行位置：服务器
+- 动作：安装已校验的 Compose 文件，导入 amd64 镜像并更新 API 服务
+- 命令：
+  ```bash
+  cp -p /opt/voidlab/packages/docker-compose.server-20261023-1727.yml \
+    /opt/voidlab/deploy/docker-compose.server.yml
+  docker load -i /opt/voidlab/packages/voidlab-api-20261023-1727.tar
+  docker compose --env-file /opt/voidlab/deploy/voidlab.deploy.env \
+    -f /opt/voidlab/deploy/docker-compose.server.yml up -d
+  curl -fsS http://127.0.0.1:8080/healthz
+  curl -fsS -o /dev/null -w 'status=%{http_code} bytes=%{size_download}\n' \
+    http://127.0.0.1:8080/api/v1/public/network/projects
+  ```
+- 结果：
+  - `voidlab-api` 使用新镜像启动，health 返回 `sqlite: ok`；Project 公共 API 返回 `200`。
+  - `voidlab-dailynews-runner` 已创建并启动，但由于生产 runner 开关关闭、Token 未设置，日志确认保持 idle。
+  - MinIO 保持运行；旧 API 镜像 rollback tag 仍可检查到。
+- 是否回滚：否
+- 备注：API 启动并通过健康与业务路由检查后，继续发布 web/admin 静态资源。
+
+### [DEPLOY-20261023-P4-P5] 发布静态资源并完成线上验收
+
+- 时间：2026-10-23 17:34 CST
+- 执行人：TRAE
+- 执行位置：服务器 / 公网
+- 动作：发布官网与后台静态资源，校验 Nginx、页面、API、封面和上传资源
+- 命令：
+  ```bash
+  rsync -a --delete --exclude="index.html" "$WEB_STAGE/" /var/www/voidlab/web/
+  rsync -a --delay-updates "$WEB_STAGE/index.html" /var/www/voidlab/web/index.html
+  rsync -a --delete --exclude="index.html" "$ADMIN_STAGE/" /var/www/voidlab/admin/
+  rsync -a --delay-updates "$ADMIN_STAGE/index.html" /var/www/voidlab/admin/index.html
+  nginx -t
+  systemctl reload nginx
+  curl -fsS http://127.0.0.1:8080/healthz
+  curl -fsS https://voidlab.club/api/v1/public/network/projects
+  ```
+- 结果：
+  - Nginx 配置检查和 reload 成功；线上 web/admin 的 `index.html` 哈希与本地构建产物一致。
+  - `https://voidlab.club/`、`/market`、`/market/projects`、项目详情页、`https://admin.voidlab.club/` 均返回 `200`；web/admin JS 资源均返回 `200`。
+  - Project 公共 API 返回 `200`，返回 5 个项目；API 直连 health 返回 `sqlite: ok`。
+  - 热门项目封面返回 `200 image/jpeg`；已存在的 `/uploads/20260801033420-d98f6d2a-611b-41c6-83e2-6d838a92dc9a.jpg` 返回 `200 image/jpeg`。
+  - `voidlab-api`、`voidlab-dailynews-runner`、MinIO 均处于运行状态；runner 保持 idle。
+  - 未认证访问日报管理接口返回 `401`，符合受保护接口行为；本次未使用管理员账号验证登录后后台操作。
+- 是否回滚：否
+- 备注：tar 解压提示 macOS xattr 扩展头未知，但不影响资源发布。Nginx `/market` 精确 SPA 规则在本次发布前已存在并保留。

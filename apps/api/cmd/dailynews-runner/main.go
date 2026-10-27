@@ -220,6 +220,16 @@ func runOnce(ctx context.Context, c *apiClient, cfg runnerConfig, date string) r
 		BuildDigest:    "skip",
 		SendFeishu:     "skip",
 	}
+	taskExists := false
+	defer func() {
+		if !taskExists {
+			return
+		}
+		if err := c.reportRunSummary(context.WithoutCancel(ctx), date, summary); err != nil {
+			summary.Failures = append(summary.Failures, "report summary failed: "+err.Error())
+			summary.Complete = false
+		}
+	}()
 	if strings.TrimSpace(cfg.AgentToken) == "" {
 		summary.Failures = append(summary.Failures, "missing VOIDLAB_AGENT_TOKEN")
 		return summary
@@ -240,6 +250,7 @@ func runOnce(ctx context.Context, c *apiClient, cfg runnerConfig, date string) r
 		summary.Failures = append(summary.Failures, "collect failed: "+err.Error())
 		return summary
 	}
+	taskExists = true
 	summary.Collect = fmt.Sprintf("ok (%d items)", len(task.Items))
 
 	if len(task.Items) < cfg.TargetCount {
@@ -793,4 +804,25 @@ func (c *apiClient) doJSON(ctx context.Context, method, path string, payload any
 		return nil
 	}
 	return json.Unmarshal(envelope.Data, out)
+}
+
+func (c *apiClient) reportRunSummary(ctx context.Context, date string, summary runSummary) error {
+	reportCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	payload := map[string]any{
+		"date":            summary.Date,
+		"collect":         summary.Collect,
+		"top_up":          summary.TopUp,
+		"approve":         summary.Approve,
+		"publish":         summary.Publish,
+		"generate_covers": summary.GenerateCovers,
+		"upload_assets":   summary.UploadAssets,
+		"bind_covers":     summary.BindCovers,
+		"build_digest":    summary.BuildDigest,
+		"send_feishu":     summary.SendFeishu,
+		"failures":        summary.Failures,
+		"warnings":        summary.Warnings,
+		"complete":        summary.Complete,
+	}
+	return c.doJSON(reportCtx, http.MethodPost, "/api/v1/daily-news/"+date+"/runner-report", payload, nil)
 }

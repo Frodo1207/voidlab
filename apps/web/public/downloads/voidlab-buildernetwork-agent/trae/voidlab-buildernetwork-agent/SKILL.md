@@ -44,6 +44,7 @@ Invoke this skill when the user wants to:
 
 - manage their Builder profile
 - publish or update works
+- create or update Projects and their plans or teams
 - publish or update opportunities
 - review requests through the API
 - read contact exchange results after acceptance
@@ -64,6 +65,8 @@ Before any write:
 - `network_profiles:write`
 - `network_works:read`
 - `network_works:write`
+- `network_projects:read`
+- `network_projects:write`
 - `network_opportunities:read`
 - `network_opportunities:write`
 - `network_contact_requests:read`
@@ -82,6 +85,10 @@ If the token lacks the required scope, expect `HTTP 403`.
 - `GET /api/v1/network/works`
 - `POST /api/v1/network/works`
 - `PUT /api/v1/network/works/:id`
+- `GET /api/v1/network/projects`
+- `GET /api/v1/network/projects/:id`
+- `POST /api/v1/network/projects`
+- `PUT /api/v1/network/projects/:id`
 - `GET /api/v1/network/opportunities`
 - `POST /api/v1/network/opportunities`
 - `PUT /api/v1/network/opportunities/:id`
@@ -106,6 +113,8 @@ For browsing, prefer public routes:
 - `GET /api/v1/public/network/discovery/profiles`
 - `GET /api/v1/public/network/discovery/works`
 - `GET /api/v1/public/network/discovery/opportunities`
+- `GET /api/v1/public/network/projects`
+- `GET /api/v1/public/network/projects/:slug`
 
 ## Operating Rules
 

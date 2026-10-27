@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -16,6 +17,88 @@ import (
 	"voidlabai/apps/api/internal/service"
 	"voidlabai/apps/api/internal/storage"
 )
+
+func TestProjectRoutesRequireProjectScopesAndReturnOwnedProject(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db, err := storage.OpenSQLite(filepath.Join(t.TempDir(), "network-project-api.sqlite"))
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	defer db.Close()
+
+	networkRepo := repository.NewBuilderNetworkRepository(db)
+	networkService := service.NewBuilderNetworkService(networkRepo)
+	tokenService := service.NewBuilderNetworkAgentTokenService(
+		networkRepo,
+		repository.NewBuilderNetworkAgentTokenRepository(db),
+	)
+	invite, err := networkService.CreateInvite(1, "", 1)
+	if err != nil {
+		t.Fatalf("create invite: %v", err)
+	}
+	owner, err := networkService.Register("project-api-owner@example.com", "secure-password", invite, domain.NetworkProfile{
+		DisplayName: "Project API Owner", PrimaryRole: "Founder",
+	})
+	if err != nil {
+		t.Fatalf("register owner: %v", err)
+	}
+	projectToken, err := tokenService.Create(owner.Account.ID, service.NetworkAgentTokenCreateInput{
+		Name:   "Project manager",
+		Scopes: []string{"network_projects:read", "network_projects:write"},
+	})
+	if err != nil {
+		t.Fatalf("create project token: %v", err)
+	}
+	legacyToken, err := tokenService.Create(owner.Account.ID, service.NetworkAgentTokenCreateInput{
+		Name:   "Legacy opportunity reader",
+		Scopes: []string{"network_opportunities:read"},
+	})
+	if err != nil {
+		t.Fatalf("create legacy token: %v", err)
+	}
+
+	router := NewRouter(config.Config{UploadsDir: t.TempDir()}, db)
+	request := httptest.NewRequest(http.MethodPost, "/api/v1/network/projects", strings.NewReader(
+		`{"title":"API Project","summary":"Created through the scoped Project API","status":"published","project_plan":{"milestones":[],"sections":[]},"members":[]}`,
+	))
+	request.Header.Set("Authorization", "Bearer "+projectToken.Token)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusCreated {
+		t.Fatalf("create Project: status=%d body=%s", response.Code, response.Body.String())
+	}
+	var created struct {
+		Data domain.NetworkProject `json:"data"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &created); err != nil || created.Data.ID == 0 {
+		t.Fatalf("decode created Project: data=%+v err=%v", created.Data, err)
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/api/v1/network/projects", nil)
+	request.Header.Set("Authorization", "Bearer "+legacyToken.Token)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("legacy Opportunity scope must not grant Project access: status=%d body=%s", response.Code, response.Body.String())
+	}
+
+	projectPath := "/api/v1/network/projects/" + strconv.FormatInt(created.Data.ID, 10)
+	request = httptest.NewRequest(http.MethodGet, projectPath, nil)
+	request.Header.Set("Authorization", "Bearer "+projectToken.Token)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "API Project") {
+		t.Fatalf("read owned Project: status=%d body=%s", response.Code, response.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/api/v1/public/network/projects/"+created.Data.Slug, nil)
+	response = httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "API Project") {
+		t.Fatalf("read public Project: status=%d body=%s", response.Code, response.Body.String())
+	}
+}
 
 func TestAgentContactExchangeReadIsAuditedWithoutPrivateValues(t *testing.T) {
 	gin.SetMode(gin.TestMode)

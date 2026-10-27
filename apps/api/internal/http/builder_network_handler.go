@@ -237,6 +237,24 @@ func (h *BuilderNetworkHandler) BrowsePublicWorks(ctx *gin.Context) {
 	OK(ctx, works)
 }
 
+func (h *BuilderNetworkHandler) PublicProjects(ctx *gin.Context) {
+	projects, err := h.service.PublicProjects()
+	if err != nil {
+		networkError(ctx, err)
+		return
+	}
+	OK(ctx, projects)
+}
+
+func (h *BuilderNetworkHandler) PublicProjectDetail(ctx *gin.Context) {
+	project, err := h.service.PublicProjectBySlug(ctx.Param("slug"))
+	if err != nil {
+		networkError(ctx, err)
+		return
+	}
+	OK(ctx, project)
+}
+
 func (h *BuilderNetworkHandler) PublicOpportunities(ctx *gin.Context) {
 	opportunities, err := h.service.PublicOpportunities()
 	if err != nil {
@@ -463,6 +481,84 @@ func (h *BuilderNetworkHandler) UpdateWork(ctx *gin.Context) {
 	}
 	recordNetworkAudit(ctx, h.auditLogService, "update", "network_work", toInt64Pointer(work.ID), work.Title, gin.H{"status": work.Status})
 	OK(ctx, work)
+}
+
+func (h *BuilderNetworkHandler) MyProjects(ctx *gin.Context) {
+	account, ok := middleware.CurrentNetworkAccount(ctx)
+	if !ok {
+		Fail(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+		return
+	}
+	projects, err := h.service.MyProjects(account.ID)
+	if err != nil {
+		networkError(ctx, err)
+		return
+	}
+	OK(ctx, projects)
+}
+
+func (h *BuilderNetworkHandler) MyProjectDetail(ctx *gin.Context) {
+	account, ok := middleware.CurrentNetworkAccount(ctx)
+	if !ok {
+		Fail(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+		return
+	}
+	projectID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil || projectID <= 0 {
+		Fail(ctx, stdhttp.StatusBadRequest, 4000, "invalid project id")
+		return
+	}
+	project, err := h.service.ProjectByID(account.ID, projectID)
+	if err != nil {
+		networkError(ctx, err)
+		return
+	}
+	OK(ctx, project)
+}
+
+func (h *BuilderNetworkHandler) CreateProject(ctx *gin.Context) {
+	account, ok := middleware.CurrentNetworkAccount(ctx)
+	if !ok {
+		Fail(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+		return
+	}
+	var input domain.NetworkProject
+	if ctx.ShouldBindJSON(&input) != nil {
+		Fail(ctx, stdhttp.StatusBadRequest, 4000, "invalid request")
+		return
+	}
+	project, err := h.service.CreateProject(account.ID, input)
+	if err != nil {
+		networkError(ctx, err)
+		return
+	}
+	recordNetworkAudit(ctx, h.auditLogService, "create", "network_project", toInt64Pointer(project.ID), project.Title, gin.H{"status": project.Status})
+	ctx.JSON(stdhttp.StatusCreated, gin.H{"code": 0, "message": "ok", "data": project})
+}
+
+func (h *BuilderNetworkHandler) UpdateProject(ctx *gin.Context) {
+	account, ok := middleware.CurrentNetworkAccount(ctx)
+	if !ok {
+		Fail(ctx, stdhttp.StatusUnauthorized, 4010, "unauthorized")
+		return
+	}
+	projectID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil || projectID <= 0 {
+		Fail(ctx, stdhttp.StatusBadRequest, 4000, "invalid project id")
+		return
+	}
+	var input domain.NetworkProject
+	if ctx.ShouldBindJSON(&input) != nil {
+		Fail(ctx, stdhttp.StatusBadRequest, 4000, "invalid request")
+		return
+	}
+	project, err := h.service.UpdateProject(account.ID, projectID, input)
+	if err != nil {
+		networkError(ctx, err)
+		return
+	}
+	recordNetworkAudit(ctx, h.auditLogService, "update", "network_project", toInt64Pointer(project.ID), project.Title, gin.H{"status": project.Status})
+	OK(ctx, project)
 }
 
 func (h *BuilderNetworkHandler) CreateOpportunity(ctx *gin.Context) {

@@ -23,7 +23,7 @@ func (h *DailyNewsHandler) response(ctx *gin.Context, task dailynews.Task) gin.H
 	return gin.H{
 		"date": task.Date, "status": task.Status, "send_status": task.SendStatus,
 		"items": task.Snapshot.Items, "article_ids": ids, "message": task.Message, "copy_text": task.CopyText,
-		"message_id": task.MessageID, "last_error": task.LastError,
+		"message_id": task.MessageID, "last_error": task.LastError, "runner_report": task.RunnerReport,
 	}
 }
 
@@ -140,6 +140,31 @@ func (h *DailyNewsHandler) Reset(ctx *gin.Context) {
 	})
 	recordAuditLog(ctx, h.audit, operator, "reset", "daily_news", toInt64Pointer(task.ID), task.Date, gin.H{
 		"deleted_article_count": len(articleIDs), "previous_status": task.Status, "previous_send_status": task.SendStatus,
+	})
+}
+
+func (h *DailyNewsHandler) UpdateRunnerReport(ctx *gin.Context) {
+	operator, ok := requireCurrentUser(ctx)
+	if !ok {
+		return
+	}
+	var input dailynews.RunnerReport
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		Fail(ctx, http.StatusBadRequest, 4601, "invalid request body")
+		return
+	}
+	task, err := h.news.UpdateRunnerReport(ctx.Request.Context(), ctx.Param("date"), input)
+	if err != nil {
+		h.fail(ctx, err)
+		return
+	}
+	OK(ctx, h.response(ctx, task))
+	recordAuditLog(ctx, h.audit, operator, "runner_report", "daily_news", toInt64Pointer(task.ID), task.Date, gin.H{
+		"complete":       input.Complete,
+		"failure_count":  len(input.Failures),
+		"warning_count":  len(input.Warnings),
+		"send_status":    task.SendStatus,
+		"publish_status": task.Status,
 	})
 }
 

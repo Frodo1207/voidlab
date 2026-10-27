@@ -111,9 +111,10 @@ func TestNormalizeNetworkAgentScopes(t *testing.T) {
 	scopes, err := normalizeNetworkAgentScopes([]string{
 		" network_works:read ",
 		"network_works:read",
+		"network_projects:read",
 		"network_contact_exchange:write",
 	})
-	if err != nil || len(scopes) != 2 {
+	if err != nil || len(scopes) != 3 {
 		t.Fatalf("expected normalized unique scopes, scopes=%v err=%v", scopes, err)
 	}
 	if _, err := normalizeNetworkAgentScopes([]string{"admin:*"}); !errors.Is(err, ErrNetworkValidation) {

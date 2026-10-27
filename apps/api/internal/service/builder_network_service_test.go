@@ -1,6 +1,7 @@
 package service
 
 import (
+	"database/sql"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -11,6 +12,11 @@ import (
 )
 
 func newBuilderNetworkFixture(t *testing.T) *BuilderNetworkService {
+	svc, _ := newBuilderNetworkFixtureWithDB(t)
+	return svc
+}
+
+func newBuilderNetworkFixtureWithDB(t *testing.T) (*BuilderNetworkService, *sql.DB) {
 	t.Helper()
 	db, err := storage.OpenSQLite(filepath.Join(t.TempDir(), "network.sqlite"))
 	if err != nil {
@@ -19,7 +25,7 @@ func newBuilderNetworkFixture(t *testing.T) *BuilderNetworkService {
 	t.Cleanup(func() {
 		_ = db.Close()
 	})
-	return NewBuilderNetworkService(repository.NewBuilderNetworkRepository(db))
+	return NewBuilderNetworkService(repository.NewBuilderNetworkRepository(db)), db
 }
 
 func TestBuilderNetworkInviteLimitAndRegistration(t *testing.T) {
@@ -82,6 +88,277 @@ func TestBuilderNetworkAdminCanListAndDisableInvites(t *testing.T) {
 	invites, err = svc.ListInvites()
 	if err != nil || len(invites) != 1 || invites[0].Status != "disabled" {
 		t.Fatalf("list disabled invite: invites=%+v err=%v", invites, err)
+	}
+}
+
+func TestBuilderNetworkOpportunityProjectDetailsRoundTrip(t *testing.T) {
+	svc := newBuilderNetworkFixture(t)
+	code, err := svc.CreateInvite(2, "", 1)
+	if err != nil {
+		t.Fatalf("create invite: %v", err)
+	}
+	owner, err := svc.Register("plan-owner@example.com", "secure-password-owner", code, domain.NetworkProfile{
+		DisplayName: "Project Owner", PrimaryRole: "Product Lead",
+	})
+	if err != nil {
+		t.Fatalf("register owner: %v", err)
+	}
+	member, err := svc.Register("plan-member@example.com", "secure-password-member", code, domain.NetworkProfile{
+		DisplayName: "Project Builder", PrimaryRole: "Engineer",
+	})
+	if err != nil {
+		t.Fatalf("register member: %v", err)
+	}
+
+	opportunity, err := svc.CreateOpportunity(owner.Account.ID, domain.NetworkOpportunity{
+		Title: "Project plan round trip", Summary: "Validate optional project plan persistence.",
+		OpportunityType: "collaboration", LookingFor: []string{"Engineer"},
+		TeamIntro: "A small product team.",
+		TeamMembers: []domain.NetworkOpportunityMember{{
+			ProfileID: member.Profile.ID, Role: "Technical lead", Contribution: "Owns the prototype.",
+		}},
+		ProjectPlan: &domain.NetworkProjectPlan{
+			Milestones: []domain.NetworkProjectMilestone{{
+				Title: "Validate the prototype", Description: "Run a small user test.",
+				Status:             "planned",
+				Timing:             &domain.NetworkProjectTiming{Kind: "duration", DurationValue: 2, DurationUnit: "iterations"},
+				Goals:              []string{"Confirm the primary workflow"},
+				Deliverables:       []string{"Interactive prototype"},
+				AcceptanceCriteria: []string{"Five users complete the core task"},
+				OwnerMemberIDs:     []int64{member.Profile.ID},
+			}},
+			Sections: []domain.NetworkProjectPlanSection{{
+				Type: "risks", Title: "Open risks", Body: "Recruiting test users may take longer.",
+				Items: []string{"Prepare a backup participant list"},
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("create opportunity with details: %v", err)
+	}
+	if opportunity.TeamIntro != "A small product team." || len(opportunity.TeamMembers) != 1 {
+		t.Fatalf("team details did not round trip: %+v", opportunity)
+	}
+	if opportunity.TeamMembers[0].ProfileID != member.Profile.ID || opportunity.TeamMembers[0].Role != "Technical lead" {
+		t.Fatalf("unexpected team member: %+v", opportunity.TeamMembers[0])
+	}
+	if opportunity.ProjectPlan == nil || len(opportunity.ProjectPlan.Milestones) != 1 || len(opportunity.ProjectPlan.Sections) != 1 {
+		t.Fatalf("project plan did not round trip: %+v", opportunity.ProjectPlan)
+	}
+	milestone := opportunity.ProjectPlan.Milestones[0]
+	if milestone.Timing == nil || milestone.Timing.DurationUnit != "iterations" ||
+		len(milestone.OwnerMemberIDs) != 1 || milestone.OwnerMemberIDs[0] != member.Profile.ID {
+		t.Fatalf("milestone details did not round trip: %+v", milestone)
+	}
+	publicOpportunity, err := svc.PublicOpportunityBySlug(opportunity.Slug)
+	if err != nil || publicOpportunity.ProjectPlan == nil ||
+		len(publicOpportunity.ProjectPlan.Milestones) != 1 || len(publicOpportunity.TeamMembers) != 1 {
+		t.Fatalf("public detail endpoint should return plan and team: opportunity=%+v err=%v", publicOpportunity, err)
+	}
+
+	updated, err := svc.UpdateOpportunity(owner.Account.ID, opportunity.ID, domain.NetworkOpportunity{
+		Title: "Project plan round trip", Summary: "Keep legacy-style opportunities valid.",
+		OpportunityType: "collaboration", LookingFor: []string{"Engineer"}, Status: "open",
+	})
+	if err != nil {
+		t.Fatalf("update opportunity without optional details: %v", err)
+	}
+	if updated.ProjectPlan == nil || len(updated.ProjectPlan.Milestones) != 0 ||
+		len(updated.TeamMembers) != 0 || updated.TeamIntro != "" {
+		t.Fatalf("omitted optional details should remain empty: %+v", updated)
+	}
+}
+
+func TestBuilderNetworkProjectsAndOpportunityOwnership(t *testing.T) {
+	svc := newBuilderNetworkFixture(t)
+	code, err := svc.CreateInvite(3, "", 1)
+	if err != nil {
+		t.Fatalf("create invite: %v", err)
+	}
+	owner, err := svc.Register("project-owner@example.com", "secure-password-owner", code, domain.NetworkProfile{
+		DisplayName: "Project Owner", PrimaryRole: "Founder",
+	})
+	if err != nil {
+		t.Fatalf("register owner: %v", err)
+	}
+	member, err := svc.Register("project-member@example.com", "secure-password-member", code, domain.NetworkProfile{
+		DisplayName: "Project Member", PrimaryRole: "Engineer",
+	})
+	if err != nil {
+		t.Fatalf("register member: %v", err)
+	}
+	other, err := svc.Register("project-other@example.com", "secure-password-other", code, domain.NetworkProfile{
+		DisplayName: "Other Owner", PrimaryRole: "Designer",
+	})
+	if err != nil {
+		t.Fatalf("register other: %v", err)
+	}
+
+	project, err := svc.CreateProject(owner.Account.ID, domain.NetworkProject{
+		Title: "Independent project", Summary: "Project is independent from recruitment.",
+		Status: "published", TeamIntro: "Small team.",
+		ProjectPlan: &domain.NetworkProjectPlan{
+			Milestones: []domain.NetworkProjectMilestone{{Title: "Prototype", Status: "planned"}},
+			Sections:   []domain.NetworkProjectPlanSection{},
+		},
+		Members: []domain.NetworkOpportunityMember{{ProfileID: member.Profile.ID, Role: "Engineer"}},
+	})
+	if err != nil {
+		t.Fatalf("create project: %v", err)
+	}
+	if project.ID == 0 || project.OwnerProfileID != owner.Profile.ID || len(project.Members) != 1 {
+		t.Fatalf("project did not round trip: %+v", project)
+	}
+	if _, err := svc.UpdateProject(other.Account.ID, project.ID, domain.NetworkProject{
+		Title: project.Title, Summary: project.Summary, Status: "published",
+	}); !errors.Is(err, repository.ErrNetworkNotFound) {
+		t.Fatalf("non-owner must not update project, got %v", err)
+	}
+
+	opportunity, err := svc.CreateOpportunity(owner.Account.ID, domain.NetworkOpportunity{
+		ProjectID: project.ID, Title: "Find an engineer", Summary: "Join this project.",
+		OpportunityType: "collaboration", LookingFor: []string{"Engineer"},
+	})
+	if err != nil {
+		t.Fatalf("create linked opportunity: %v", err)
+	}
+	if opportunity.ProjectID != project.ID || opportunity.ProjectPlan == nil ||
+		len(opportunity.ProjectPlan.Milestones) != 1 || opportunity.TeamIntro != "Small team." {
+		t.Fatalf("opportunity should expose its Project aggregate: %+v", opportunity)
+	}
+	if _, err := svc.CreateOpportunity(other.Account.ID, domain.NetworkOpportunity{
+		ProjectID: project.ID, Title: "Unauthorized opportunity", Summary: "Should be rejected.",
+		OpportunityType: "collaboration", LookingFor: []string{"Engineer"},
+	}); !errors.Is(err, repository.ErrNetworkNotFound) {
+		t.Fatalf("non-owner must not attach an opportunity to project, got %v", err)
+	}
+
+	publicProject, err := svc.PublicProjectBySlug(project.Slug)
+	if err != nil || len(publicProject.Opportunities) != 1 ||
+		publicProject.Opportunities[0].ID != opportunity.ID {
+		t.Fatalf("public project should include open opportunities: project=%+v err=%v", publicProject, err)
+	}
+	request, err := svc.CreateContactRequest(other.Account.ID, domain.NetworkContactRequest{
+		TargetType: "opportunity", TargetID: opportunity.ID, Message: "I can help with this project.",
+	})
+	if err != nil || request.TargetType != "opportunity" || request.TargetID != opportunity.ID {
+		t.Fatalf("contact request must continue targeting the Opportunity ID: request=%+v err=%v", request, err)
+	}
+	ownedProjects, err := svc.MyProjects(owner.Account.ID)
+	if err != nil || len(ownedProjects) != 1 || ownedProjects[0].ID != project.ID {
+		t.Fatalf("owner project listing mismatch: projects=%+v err=%v", ownedProjects, err)
+	}
+	if _, err := svc.UpdateProject(owner.Account.ID, project.ID, domain.NetworkProject{
+		Title: "Independent project", Summary: "Archived project.", Status: "archived",
+	}); err != nil {
+		t.Fatalf("archive project: %v", err)
+	}
+	if _, err := svc.PublicProjectBySlug(project.Slug); !errors.Is(err, repository.ErrNetworkNotFound) {
+		t.Fatalf("archived project must not be public: %v", err)
+	}
+	if _, err := svc.PublicOpportunityBySlug(opportunity.Slug); !errors.Is(err, repository.ErrNetworkNotFound) {
+		t.Fatalf("legacy opportunity route must respect Project visibility: %v", err)
+	}
+}
+
+func TestBuilderNetworkOpportunityCreateRollsBackProjectOnFailure(t *testing.T) {
+	svc, db := newBuilderNetworkFixtureWithDB(t)
+	code, err := svc.CreateInvite(1, "", 1)
+	if err != nil {
+		t.Fatalf("create invite: %v", err)
+	}
+	owner, err := svc.Register("atomic-project@example.com", "secure-password", code, domain.NetworkProfile{
+		DisplayName: "Atomic Owner", PrimaryRole: "Founder",
+	})
+	if err != nil {
+		t.Fatalf("register owner: %v", err)
+	}
+	if _, err := db.Exec(`
+		CREATE TRIGGER reject_network_opportunities
+		BEFORE INSERT ON network_opportunities
+		BEGIN SELECT RAISE(ABORT, 'forced opportunity failure'); END
+	`); err != nil {
+		t.Fatalf("create failure trigger: %v", err)
+	}
+	if _, err := svc.CreateOpportunity(owner.Account.ID, domain.NetworkOpportunity{
+		Title: "Atomic project", Summary: "Must rollback with failed opportunity.",
+		OpportunityType: "collaboration", LookingFor: []string{"Engineer"},
+	}); err == nil {
+		t.Fatal("expected forced opportunity insert failure")
+	}
+	var projects, opportunities int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM network_projects`).Scan(&projects); err != nil {
+		t.Fatalf("count projects: %v", err)
+	}
+	if err := db.QueryRow(`SELECT COUNT(*) FROM network_opportunities`).Scan(&opportunities); err != nil {
+		t.Fatalf("count opportunities: %v", err)
+	}
+	if projects != 0 || opportunities != 0 {
+		t.Fatalf("failed combined creation left partial data: projects=%d opportunities=%d", projects, opportunities)
+	}
+}
+
+func TestBuilderNetworkOpportunityRejectsInvalidProjectPlan(t *testing.T) {
+	svc := newBuilderNetworkFixture(t)
+	code, err := svc.CreateInvite(1, "", 1)
+	if err != nil {
+		t.Fatalf("create invite: %v", err)
+	}
+	owner, err := svc.Register("invalid-plan@example.com", "secure-password-owner", code, domain.NetworkProfile{
+		DisplayName: "Project Owner", PrimaryRole: "Product Lead",
+	})
+	if err != nil {
+		t.Fatalf("register owner: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		milestone domain.NetworkProjectMilestone
+		members   []domain.NetworkOpportunityMember
+	}{
+		{
+			name: "end date before start date",
+			milestone: domain.NetworkProjectMilestone{
+				Title: "Invalid date range",
+				Timing: &domain.NetworkProjectTiming{
+					Kind: "fixed_dates", StartAt: "2026-12-20", EndAt: "2026-12-10",
+				},
+			},
+		},
+		{
+			name: "owner is not on the team",
+			milestone: domain.NetworkProjectMilestone{
+				Title: "Unassigned owner", OwnerMemberIDs: []int64{999},
+			},
+		},
+		{
+			name: "duration requires a positive value",
+			milestone: domain.NetworkProjectMilestone{
+				Title:  "Invalid duration",
+				Timing: &domain.NetworkProjectTiming{Kind: "duration", DurationValue: 0, DurationUnit: "days"},
+			},
+		},
+		{
+			name: "team member profile must be public",
+			members: []domain.NetworkOpportunityMember{{
+				ProfileID: 999, Role: "Engineer",
+			}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := svc.CreateOpportunity(owner.Account.ID, domain.NetworkOpportunity{
+				Title: "Invalid project plan", Summary: "This plan should fail validation.",
+				OpportunityType: "collaboration", LookingFor: []string{"Engineer"},
+				TeamMembers: test.members,
+				ProjectPlan: &domain.NetworkProjectPlan{
+					Milestones: []domain.NetworkProjectMilestone{test.milestone},
+				},
+			})
+			if !errors.Is(err, ErrNetworkValidation) {
+				t.Fatalf("expected project plan validation error, got %v", err)
+			}
+		})
 	}
 }
 

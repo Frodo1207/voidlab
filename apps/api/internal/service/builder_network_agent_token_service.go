@@ -16,6 +16,8 @@ var allowedNetworkAgentScopes = map[string]struct{}{
 	"network_profiles:write":         {},
 	"network_works:read":             {},
 	"network_works:write":            {},
+	"network_projects:read":          {},
+	"network_projects:write":         {},
 	"network_opportunities:read":     {},
 	"network_opportunities:write":    {},
 	"network_contact_requests:read":  {},

@@ -12,6 +12,8 @@ import KnowledgePage from "../pages/knowledge.vue";
 import KnowledgeSpacePage from "../pages/knowledge-space.vue";
 import KnowledgeEntryPage from "../pages/knowledge-entry.vue";
 import BuilderMarketPage from "../pages/market.vue";
+import MarketBuilderDetailPage from "../pages/market-builder-detail.vue";
+import MarketProjectDetailPage from "../pages/market-project-detail.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -19,6 +21,14 @@ const router = createRouter({
     {
       path: "/market",
       component: BuilderMarketPage
+    },
+    {
+      path: "/market/builders/:slug",
+      component: MarketBuilderDetailPage
+    },
+    {
+      path: "/market/projects/:slug",
+      component: MarketProjectDetailPage
     },
     {
       path: "/market/:section",

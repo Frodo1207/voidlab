@@ -15,6 +15,9 @@ apps/web/node_modules/
 apps/admin/node_modules/
 apps/admin/dist/
 
+apps/web/fix_*.py
+apps/web/patch_*.py
+
 data/sqlite/*.db
 data/sqlite/*.db-*
 data/minio/

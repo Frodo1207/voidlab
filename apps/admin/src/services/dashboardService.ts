@@ -110,6 +110,7 @@ function mapLead(record: ApiLeadRecord): LeadRecord {
     message: record.message,
     status: record.status,
     notes: record.notes,
+    dedupeKey: "",
     ownerId: record.owner_id,
     createdAt: record.created_at,
     updatedAt: record.updated_at,

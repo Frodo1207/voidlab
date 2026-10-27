@@ -666,6 +666,47 @@ func TestLegacyPreviewBackfill(t *testing.T) {
 	}
 }
 
+func TestRunnerReportPersistence(t *testing.T) {
+	ctx := context.Background()
+	db := database(t)
+	s := newTestService(t, db, Options{})
+	task := generate(t, s, "2026-10-12")
+	report := RunnerReport{
+		Collect:        "ok (5 items)",
+		TopUp:          "ok (+1, total 5)",
+		Approve:        "ok",
+		Publish:        "ok",
+		GenerateCovers: "ok (5 generated)",
+		UploadAssets:   "ok (5 uploaded)",
+		BindCovers:     "ok (5 bound, 0 gallery reused, 0 already had covers)",
+		BuildDigest:    "ok",
+		SendFeishu:     "failed",
+		Failures:       []string{"send failed: feishu unavailable"},
+		Warnings:       []string{"generate cover failed for sample: timeout"},
+		Complete:       false,
+	}
+	updated, err := s.UpdateRunnerReport(ctx, task.Date, report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.RunnerReport == nil || updated.RunnerReport.Date != task.Date ||
+		updated.RunnerReport.SendFeishu != "failed" || updated.RunnerReport.RecordedAt == "" {
+		t.Fatalf("runner report not persisted: %+v", updated.RunnerReport)
+	}
+	if len(updated.RunnerReport.Failures) != 1 || len(updated.RunnerReport.Warnings) != 1 {
+		t.Fatalf("runner report details missing: %+v", updated.RunnerReport)
+	}
+	list, err := s.List(ctx, 10, 0)
+	if err != nil || len(list) != 1 || list[0].RunnerReport == nil || list[0].RunnerReport.SendFeishu != "failed" {
+		t.Fatalf("runner report not visible in list: %+v %v", list, err)
+	}
+	var raw string
+	if err := db.QueryRow(`SELECT runner_report_json FROM dailynews_tasks WHERE id=?`, task.ID).Scan(&raw); err != nil ||
+		!strings.Contains(raw, `"send_feishu":"failed"`) {
+		t.Fatalf("runner report column missing: %s %v", raw, err)
+	}
+}
+
 func TestUnpublishedLegacyLinksRemovedWithoutRewritingFrozenMessage(t *testing.T) {
 	ctx := context.Background()
 	db := database(t)

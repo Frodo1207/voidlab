@@ -51,6 +51,7 @@
 - 如果当天任务已经存在，runner 会读取任务状态并继续未完成步骤。
 - 如果当天已经 `sent`，runner 只记录 `already-sent`，不会重复制造第二条群消息。
 - 运行摘要会拆成 `generate_covers`、`upload_assets`、`bind_covers`、`build_digest`、`send_feishu` 等细阶段；失败或降级原因会分别写入 `failures` 或 `warnings`。
+- 每次运行结束后，runner 会通过正式 API 把摘要回写到当天任务的 `runner_report`，后台“每日资讯”详情页可直接看到阶段状态与失败原因。
 - 只有当站内文章、封面绑定、摘要构建和飞书发送都达到完成态时，runner 才会把当天任务视为真正完成。
 
 ## 部署建议

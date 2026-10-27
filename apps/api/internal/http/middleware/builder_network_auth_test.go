@@ -45,11 +45,21 @@ func TestNetworkAgentScopeAndSessionGuards(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create agent token: %v", err)
 	}
+	projectToken, err := tokenService.Create(session.Account.ID, service.NetworkAgentTokenCreateInput{
+		Name:   "Project reader",
+		Scopes: []string{"network_projects:read"},
+	})
+	if err != nil {
+		t.Fatalf("create project token: %v", err)
+	}
 
 	engine := gin.New()
 	network := engine.Group("/network")
 	network.Use(RequireNetworkAuth(networkService, tokenService))
 	network.GET("/read", RequireNetworkScopes("network_profiles:read"), func(ctx *gin.Context) {
+		ctx.Status(http.StatusNoContent)
+	})
+	network.GET("/projects", RequireNetworkScopes("network_projects:read"), func(ctx *gin.Context) {
 		ctx.Status(http.StatusNoContent)
 	})
 	network.POST("/write", RequireNetworkScopes("network_works:write"), func(ctx *gin.Context) {
@@ -65,6 +75,22 @@ func TestNetworkAgentScopeAndSessionGuards(t *testing.T) {
 	engine.ServeHTTP(response, request)
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("read scope should be permitted, status=%d body=%s", response.Code, response.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/network/projects", nil)
+	request.Header.Set("Authorization", "Bearer "+agentToken.Token)
+	response = httptest.NewRecorder()
+	engine.ServeHTTP(response, request)
+	if response.Code != http.StatusForbidden {
+		t.Fatalf("profile scope must not grant Project access, status=%d body=%s", response.Code, response.Body.String())
+	}
+
+	request = httptest.NewRequest(http.MethodGet, "/network/projects", nil)
+	request.Header.Set("Authorization", "Bearer "+projectToken.Token)
+	response = httptest.NewRecorder()
+	engine.ServeHTTP(response, request)
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("Project scope should permit Project reads, status=%d body=%s", response.Code, response.Body.String())
 	}
 
 	request = httptest.NewRequest(http.MethodPost, "/network/write", nil)

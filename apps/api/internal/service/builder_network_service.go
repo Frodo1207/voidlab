@@ -243,6 +243,92 @@ func (s *BuilderNetworkService) MyWorks(accountID int64) ([]domain.NetworkWork, 
 	return s.repo.ListWorksByProfile(profile.ID)
 }
 
+func (s *BuilderNetworkService) MyProjects(accountID int64) ([]domain.NetworkProject, error) {
+	_, profile, err := s.repo.GetAccountProfile(accountID)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.ListProjectsByOwner(profile.ID)
+}
+
+func (s *BuilderNetworkService) ProjectByID(accountID, projectID int64) (domain.NetworkProject, error) {
+	if projectID <= 0 {
+		return domain.NetworkProject{}, fmt.Errorf("%w: invalid project id", ErrNetworkValidation)
+	}
+	_, profile, err := s.repo.GetAccountProfile(accountID)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	return s.repo.GetProjectByOwner(profile.ID, projectID)
+}
+
+func (s *BuilderNetworkService) CreateProject(accountID int64, project domain.NetworkProject) (domain.NetworkProject, error) {
+	project.Title = strings.TrimSpace(project.Title)
+	project.Summary = strings.TrimSpace(project.Summary)
+	project.TeamIntro = strings.TrimSpace(project.TeamIntro)
+	if project.Title == "" || project.Summary == "" || len([]rune(project.Title)) > 100 || len([]rune(project.Summary)) > 3000 {
+		return domain.NetworkProject{}, fmt.Errorf("%w: project title and summary are required and must fit limits", ErrNetworkValidation)
+	}
+	if project.Status == "" {
+		project.Status = "draft"
+	}
+	if project.Status != "draft" && project.Status != "published" && project.Status != "archived" {
+		return domain.NetworkProject{}, fmt.Errorf("%w: invalid project status", ErrNetworkValidation)
+	}
+	if len([]rune(project.TeamIntro)) > 2000 {
+		return domain.NetworkProject{}, fmt.Errorf("%w: team_intro exceeds 2000 characters", ErrNetworkValidation)
+	}
+	if err := s.validateProjectDetails(&project); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	_, profile, err := s.repo.GetAccountProfile(accountID)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	project.Slug = slugWithSuffix(project.Title)
+	return s.repo.CreateProject(profile.ID, project)
+}
+
+func (s *BuilderNetworkService) UpdateProject(accountID, projectID int64, project domain.NetworkProject) (domain.NetworkProject, error) {
+	if projectID <= 0 {
+		return domain.NetworkProject{}, fmt.Errorf("%w: invalid project id", ErrNetworkValidation)
+	}
+	project.Title = strings.TrimSpace(project.Title)
+	project.Summary = strings.TrimSpace(project.Summary)
+	project.TeamIntro = strings.TrimSpace(project.TeamIntro)
+	if project.Title == "" || project.Summary == "" || len([]rune(project.Title)) > 100 || len([]rune(project.Summary)) > 3000 {
+		return domain.NetworkProject{}, fmt.Errorf("%w: project title and summary are required and must fit limits", ErrNetworkValidation)
+	}
+	if project.Status != "draft" && project.Status != "published" && project.Status != "archived" {
+		return domain.NetworkProject{}, fmt.Errorf("%w: invalid project status", ErrNetworkValidation)
+	}
+	if len([]rune(project.TeamIntro)) > 2000 {
+		return domain.NetworkProject{}, fmt.Errorf("%w: team_intro exceeds 2000 characters", ErrNetworkValidation)
+	}
+	if err := s.validateProjectDetails(&project); err != nil {
+		return domain.NetworkProject{}, err
+	}
+	_, profile, err := s.repo.GetAccountProfile(accountID)
+	if err != nil {
+		return domain.NetworkProject{}, err
+	}
+	return s.repo.UpdateProject(profile.ID, projectID, project)
+}
+
+func (s *BuilderNetworkService) validateProjectDetails(project *domain.NetworkProject) error {
+	opportunity := domain.NetworkOpportunity{
+		ProjectPlan: project.ProjectPlan,
+		TeamIntro:   project.TeamIntro,
+		TeamMembers: project.Members,
+	}
+	if err := s.validateOpportunityProjectDetails(&opportunity); err != nil {
+		return err
+	}
+	project.ProjectPlan = opportunity.ProjectPlan
+	project.Members = opportunity.TeamMembers
+	return nil
+}
+
 func (s *BuilderNetworkService) CreateOpportunity(accountID int64, opportunity domain.NetworkOpportunity) (domain.NetworkOpportunity, error) {
 	opportunity.Title = strings.TrimSpace(opportunity.Title)
 	opportunity.OpportunityType = strings.TrimSpace(opportunity.OpportunityType)
@@ -267,6 +353,9 @@ func (s *BuilderNetworkService) CreateOpportunity(accountID int64, opportunity d
 			return domain.NetworkOpportunity{}, fmt.Errorf("%w: expires_at must be RFC3339 or a stored UTC timestamp", ErrNetworkValidation)
 		}
 		opportunity.ExpiresAt = expiresAt
+	}
+	if err := s.validateOpportunityProjectDetails(&opportunity); err != nil {
+		return domain.NetworkOpportunity{}, err
 	}
 	_, profile, err := s.repo.GetAccountProfile(accountID)
 	if err != nil {
@@ -298,11 +387,152 @@ func (s *BuilderNetworkService) UpdateOpportunity(accountID, opportunityID int64
 		}
 		opportunity.ExpiresAt = expiresAt
 	}
+	if err := s.validateOpportunityProjectDetails(&opportunity); err != nil {
+		return domain.NetworkOpportunity{}, err
+	}
 	_, profile, err := s.repo.GetAccountProfile(accountID)
 	if err != nil {
 		return domain.NetworkOpportunity{}, err
 	}
 	return s.repo.UpdateOpportunity(profile.ID, opportunityID, opportunity)
+}
+
+func (s *BuilderNetworkService) validateOpportunityProjectDetails(opportunity *domain.NetworkOpportunity) error {
+	opportunity.TeamIntro = strings.TrimSpace(opportunity.TeamIntro)
+	if len([]rune(opportunity.TeamIntro)) > 2000 {
+		return fmt.Errorf("%w: team_intro exceeds 2000 characters", ErrNetworkValidation)
+	}
+
+	if opportunity.ProjectPlan != nil {
+		plan := opportunity.ProjectPlan
+		if len(plan.Milestones) > 30 || len(plan.Sections) > 20 {
+			return fmt.Errorf("%w: project plan allows up to 30 milestones and 20 sections", ErrNetworkValidation)
+		}
+		teamMemberIDs := make(map[int64]struct{}, len(opportunity.TeamMembers))
+		for _, member := range opportunity.TeamMembers {
+			teamMemberIDs[member.ProfileID] = struct{}{}
+		}
+		for i := range plan.Milestones {
+			milestone := &plan.Milestones[i]
+			milestone.Title = strings.TrimSpace(milestone.Title)
+			milestone.Description = strings.TrimSpace(milestone.Description)
+			if milestone.Title == "" || len([]rune(milestone.Title)) > 120 || len([]rune(milestone.Description)) > 2000 {
+				return fmt.Errorf("%w: each milestone needs a title of up to 120 characters", ErrNetworkValidation)
+			}
+			if milestone.Status == "" {
+				milestone.Status = "planned"
+			}
+			if milestone.Status != "planned" && milestone.Status != "in_progress" && milestone.Status != "completed" && milestone.Status != "blocked" {
+				return fmt.Errorf("%w: invalid milestone status", ErrNetworkValidation)
+			}
+			if len(milestone.Goals) > 20 || len(milestone.Deliverables) > 20 || len(milestone.AcceptanceCriteria) > 20 {
+				return fmt.Errorf("%w: milestone lists allow up to 20 items", ErrNetworkValidation)
+			}
+			milestone.Goals = cleanNetworkTextItems(milestone.Goals)
+			milestone.Deliverables = cleanNetworkTextItems(milestone.Deliverables)
+			milestone.AcceptanceCriteria = cleanNetworkTextItems(milestone.AcceptanceCriteria)
+			for _, ownerID := range milestone.OwnerMemberIDs {
+				if _, ok := teamMemberIDs[ownerID]; !ok {
+					return fmt.Errorf("%w: milestone owners must be project team members", ErrNetworkValidation)
+				}
+			}
+			if milestone.Timing != nil {
+				timing := milestone.Timing
+				timing.Kind = strings.TrimSpace(timing.Kind)
+				timing.Label = strings.TrimSpace(timing.Label)
+				timing.DurationUnit = strings.TrimSpace(timing.DurationUnit)
+				switch timing.Kind {
+				case "fixed_dates":
+					if !validPlanDate(timing.StartAt) || !validPlanDate(timing.EndAt) {
+						return fmt.Errorf("%w: fixed_dates timing requires valid start_at and end_at", ErrNetworkValidation)
+					}
+					start, _ := parsePlanDate(timing.StartAt)
+					end, _ := parsePlanDate(timing.EndAt)
+					if end.Before(start) {
+						return fmt.Errorf("%w: timing end_at must not precede start_at", ErrNetworkValidation)
+					}
+				case "duration":
+					if timing.DurationValue <= 0 || timing.DurationUnit == "" || len([]rune(timing.DurationUnit)) > 24 {
+						return fmt.Errorf("%w: duration timing requires a positive duration and unit", ErrNetworkValidation)
+					}
+				case "relative", "flexible", "unspecified":
+				default:
+					return fmt.Errorf("%w: timing kind must be fixed_dates, duration, relative, flexible, or unspecified", ErrNetworkValidation)
+				}
+				if len([]rune(timing.Label)) > 120 {
+					return fmt.Errorf("%w: timing label exceeds 120 characters", ErrNetworkValidation)
+				}
+			}
+		}
+		for i := range plan.Sections {
+			section := &plan.Sections[i]
+			section.Type = strings.TrimSpace(section.Type)
+			section.Title = strings.TrimSpace(section.Title)
+			section.Body = strings.TrimSpace(section.Body)
+			if section.Type == "" {
+				section.Type = "custom"
+			}
+			if section.Title == "" || len([]rune(section.Title)) > 100 || len([]rune(section.Body)) > 5000 || len(section.Items) > 30 {
+				return fmt.Errorf("%w: each plan section needs a title and may contain up to 30 items", ErrNetworkValidation)
+			}
+			section.Items = cleanNetworkTextItems(section.Items)
+		}
+	}
+
+	if len(opportunity.TeamMembers) > 20 {
+		return fmt.Errorf("%w: project teams allow up to 20 members", ErrNetworkValidation)
+	}
+	profileIDs := make([]int64, 0, len(opportunity.TeamMembers))
+	seen := make(map[int64]struct{}, len(opportunity.TeamMembers))
+	for i := range opportunity.TeamMembers {
+		member := &opportunity.TeamMembers[i]
+		member.Role = strings.TrimSpace(member.Role)
+		member.Contribution = strings.TrimSpace(member.Contribution)
+		if member.ProfileID <= 0 || member.Role == "" || len([]rune(member.Role)) > 100 || len([]rune(member.Contribution)) > 1000 {
+			return fmt.Errorf("%w: each team member needs a profile_id and role", ErrNetworkValidation)
+		}
+		if _, exists := seen[member.ProfileID]; exists {
+			return fmt.Errorf("%w: duplicate project team member", ErrNetworkValidation)
+		}
+		seen[member.ProfileID] = struct{}{}
+		profileIDs = append(profileIDs, member.ProfileID)
+		member.SortOrder = i
+	}
+	if len(profileIDs) > 0 {
+		exists, err := s.repo.PublicProfilesExist(profileIDs)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("%w: project team members must reference published profiles", ErrNetworkValidation)
+		}
+	}
+	return nil
+}
+
+func cleanNetworkTextItems(items []string) []string {
+	cleaned := make([]string, 0, len(items))
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			cleaned = append(cleaned, item)
+		}
+	}
+	return cleaned
+}
+
+func validPlanDate(value string) bool {
+	_, err := parsePlanDate(value)
+	return err == nil
+}
+
+func parsePlanDate(value string) (time.Time, error) {
+	for _, layout := range []string{time.RFC3339, "2006-01-02"} {
+		if parsed, err := time.Parse(layout, value); err == nil {
+			return parsed, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid date")
 }
 
 func (s *BuilderNetworkService) MyOpportunities(accountID int64) ([]domain.NetworkOpportunity, error) {
@@ -315,6 +545,14 @@ func (s *BuilderNetworkService) MyOpportunities(accountID int64) ([]domain.Netwo
 
 func (s *BuilderNetworkService) PublicOpportunities() ([]domain.NetworkOpportunity, error) {
 	return s.repo.ListPublicOpportunities()
+}
+
+func (s *BuilderNetworkService) PublicProjects() ([]domain.NetworkProject, error) {
+	return s.repo.ListPublicProjects()
+}
+
+func (s *BuilderNetworkService) PublicProjectBySlug(slug string) (domain.NetworkProject, error) {
+	return s.repo.GetPublicProjectBySlug(strings.TrimSpace(slug))
 }
 
 func (s *BuilderNetworkService) BrowsePublicOpportunities(query domain.NetworkDiscoveryQuery) (domain.NetworkPage[domain.NetworkOpportunity], error) {

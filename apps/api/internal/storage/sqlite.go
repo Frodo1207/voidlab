@@ -497,6 +497,9 @@ func migrateBuilderNetworkSchema(db *sql.DB) error {
 			remote_allowed INTEGER NOT NULL DEFAULT 1,
 			status TEXT NOT NULL DEFAULT 'open',
 			expires_at DATETIME,
+                        project_plan_json TEXT NOT NULL DEFAULT '',
+                        team_intro TEXT NOT NULL DEFAULT '',
+                        team_members_json TEXT NOT NULL DEFAULT '[]',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
@@ -543,7 +546,59 @@ func migrateBuilderNetworkSchema(db *sql.DB) error {
 	if err := ensureNetworkContactRequestProgressColumn(db); err != nil {
 		return err
 	}
-	return ensureNetworkContactExchangeConsentColumns(db)
+	if err := ensureNetworkOpportunityDetailColumns(db); err != nil {
+		return err
+	}
+	if err := ensureNetworkContactExchangeConsentColumns(db); err != nil {
+		return err
+	}
+	if err := migrateBuilderNetworkProjects(db); err != nil {
+		return err
+	}
+	return migrateBuilderNetworkOpportunityProjectConstraint(db)
+}
+
+func ensureNetworkOpportunityDetailColumns(db *sql.DB) error {
+	rows, err := db.Query(`PRAGMA table_info(network_opportunities)`)
+	if err != nil {
+		return err
+	}
+	existing := make(map[string]bool)
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, columnType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		existing[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+
+	columns := []struct {
+		name string
+		ddl  string
+	}{
+		{"project_plan_json", `ALTER TABLE network_opportunities ADD COLUMN project_plan_json TEXT NOT NULL DEFAULT ''`},
+		{"team_intro", `ALTER TABLE network_opportunities ADD COLUMN team_intro TEXT NOT NULL DEFAULT ''`},
+		{"team_members_json", `ALTER TABLE network_opportunities ADD COLUMN team_members_json TEXT NOT NULL DEFAULT '[]'`},
+	}
+	for _, column := range columns {
+		if existing[column.name] {
+			continue
+		}
+		if _, err := db.Exec(column.ddl); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureNetworkContactRequestProgressColumn(db *sql.DB) error {
